@@ -1,0 +1,226 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import { Image, getImage } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import { SITE } from '../../config';
+import { getPublishedWorks } from '../../lib/works';
+
+export const getStaticPaths = (async () => {
+  const works = await getPublishedWorks();
+  return works.map((work) => ({ params: { id: work.id }, props: { work } }));
+}) satisfies GetStaticPaths;
+
+const { work } = Astro.props;
+const { title, summary, date, cover, coverAlt, tags, links, embed } = work.data;
+const { Content } = await render(work);
+
+// 共有したときの画像(表紙があれば、1200x630 に整えたもの)
+let ogImage: string | undefined;
+if (cover) {
+  const og = await getImage({ src: cover, width: 1200, height: 630, fit: 'cover', format: 'jpg' });
+  ogImage = new URL(og.src, Astro.site).href;
+}
+
+const pageUrl = new URL(Astro.url.pathname, Astro.site).href;
+const dateText = new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(date);
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'VideoGame',
+    name: title,
+    description: summary,
+    url: pageUrl,
+    datePublished: date.toISOString().slice(0, 10),
+    inLanguage: 'ja',
+    author: { '@type': 'Person', name: SITE.name, url: SITE.url },
+    ...(ogImage ? { image: ogImage } : {}),
+    ...(tags.length > 0 ? { keywords: tags.join(', ') } : {}),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: SITE.name, item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: '作品', item: SITE.url + '/works/' },
+      { '@type': 'ListItem', position: 3, name: title, item: pageUrl },
+    ],
+  },
+];
+---
+
+<Base title={title} description={summary} image={ogImage} type="article" jsonLd={jsonLd}>
+  <article class="work-page">
+    <header class="container work-head">
+      <p class="crumb"><a href="/works/">作品</a></p>
+      <h1>{title}</h1>
+      <p class="work-head__summary">{summary}</p>
+      <p class="work-head__meta">
+        <time datetime={date.toISOString().slice(0, 10)}>{dateText}</time>
+        {tags.map((t) => <span>{t}</span>)}
+      </p>
+    </header>
+
+    {
+      cover && (
+        <figure class="container cover">
+          <Image
+            src={cover}
+            alt={coverAlt ?? `${title}の画面`}
+            widths={[480, 800, 1200]}
+            sizes="(min-width: 68rem) 56rem, 100vw"
+            loading="eager"
+            class="cover__img"
+          />
+        </figure>
+      )
+    }
+
+    {
+      links.length > 0 && (
+        <ul class="container actions">
+          {links.map((l, i) => (
+            <li>
+              <a class={`button${i === 0 ? ' button--primary' : ''}`} href={l.url} target="_blank" rel="noopener">
+                {l.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+
+    {
+      embed && (
+        <div class="container">
+          <div class="embed">
+            <iframe
+              src={embed}
+              title={`${title}(ブラウザで遊ぶ)`}
+              loading="lazy"
+              allow="fullscreen; autoplay; gamepad"
+              referrerpolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        </div>
+      )
+    }
+
+    <div class="container body">
+      <div class="prose">
+        <Content />
+      </div>
+    </div>
+
+    <p class="container back"><a href="/works/">作品の一覧へ戻る</a></p>
+  </article>
+</Base>
+
+<style>
+  .work-head {
+    text-align: center;
+    padding-top: 2.4rem;
+    max-width: 46rem;
+  }
+  .crumb {
+    margin: 0 0 2.6rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.4em;
+    color: var(--sumi-soft);
+  }
+  h1 {
+    font-size: clamp(1.6rem, 5vw, 2.3rem);
+    letter-spacing: 0.16em;
+    margin-bottom: 1.4rem;
+  }
+  .work-head__summary {
+    color: var(--sumi-mid);
+    margin-bottom: 1rem;
+  }
+  .work-head__meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 1.4rem;
+    font-size: 0.82rem;
+    letter-spacing: 0.14em;
+    color: var(--sumi-soft);
+    margin-bottom: 2.6rem;
+  }
+
+  .cover {
+    max-width: 56rem;
+    margin: 0 auto 3rem;
+  }
+  .cover :global(.cover__img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    outline: 1px solid var(--line);
+    outline-offset: 0.6rem;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem 1.4rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 auto 3.4rem;
+  }
+  .button {
+    display: inline-block;
+    padding: 0.7rem 2rem;
+    border: 1px solid var(--sumi);
+    border-radius: 999px;
+    text-decoration: none;
+    letter-spacing: 0.2em;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    transition:
+      background 0.4s,
+      color 0.4s;
+  }
+  .button:hover,
+  .button:focus-visible {
+    background: var(--sumi);
+    color: var(--washi);
+  }
+  .button--primary {
+    background: var(--sumi);
+    color: var(--washi);
+  }
+  .button--primary:hover,
+  .button--primary:focus-visible {
+    background: transparent;
+    color: var(--sumi);
+  }
+
+  .embed {
+    position: relative;
+    max-width: 56rem;
+    margin: 0 auto 3.4rem;
+    aspect-ratio: 16 / 9;
+    background: var(--washi-2);
+    outline: 1px solid var(--line);
+    outline-offset: 0.6rem;
+  }
+  .embed iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .body {
+    margin-top: 1rem;
+  }
+  .back {
+    text-align: center;
+    margin-top: 4.4rem;
+    letter-spacing: 0.3em;
+  }
+</style>

@@ -1,0 +1,79 @@
+---
+import Base from '../layouts/Base.astro';
+import Enso from '../components/Enso.astro';
+import { SITE, LINKS, ABOUT } from '../config';
+---
+
+<Base title="紹介" description={`${SITE.name}の紹介ページです。${ABOUT[0] ?? ''}`}>
+  <div class="container narrow">
+    <h1 class="page-title">紹介</h1>
+
+    <div class="about">
+      <div class="about__enso"><Enso seed={5} /></div>
+      <h2 class="about__name">{SITE.name}</h2>
+      <div class="prose">
+        {ABOUT.map((line) => <p>{line}</p>)}
+      </div>
+
+      {
+        LINKS.length > 0 && (
+          <>
+            <hr class="brush-rule" />
+            <ul class="links">
+              {LINKS.map((l) => (
+                <li>
+                  <a href={l.url} rel="me noopener" target="_blank">
+                    {l.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )
+      }
+    </div>
+  </div>
+</Base>
+
+<style>
+  .narrow {
+    max-width: 44rem;
+  }
+  .page-title {
+    text-align: center;
+    font-size: 1.1rem;
+    letter-spacing: 0.6em;
+    padding-left: 0.6em;
+    margin: 3rem 0 3.4rem;
+    color: var(--sumi-mid);
+  }
+  .about {
+    text-align: center;
+  }
+  .about__enso {
+    width: 8rem;
+    margin: 0 auto 1.6rem;
+  }
+  .about__name {
+    font-size: 1.5rem;
+    letter-spacing: 0.3em;
+    padding-left: 0.3em;
+    margin-bottom: 2.4rem;
+  }
+  .about .prose {
+    text-align: left;
+  }
+  .about .brush-rule {
+    margin: 3rem 0 2rem;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.6rem 2rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    letter-spacing: 0.2em;
+  }
+</style>

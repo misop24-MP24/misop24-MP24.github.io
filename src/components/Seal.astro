@@ -1,0 +1,40 @@
+---
+// 落款(朱色の印)。サイトの署名として使います。
+import { SITE } from '../config';
+
+interface Props {
+  size?: 'sm' | 'md';
+}
+const { size = 'md' } = Astro.props;
+---
+
+<span class={`seal seal--${size}`} aria-hidden="true">{SITE.seal}</span>
+
+<style>
+  .seal {
+    display: inline-grid;
+    place-items: center;
+    background: var(--shu);
+    color: var(--washi);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+    border-radius: 3px;
+    transform: rotate(-3deg);
+    box-shadow: 0 0 0 1px var(--shu);
+    outline: 1px solid color-mix(in srgb, var(--washi) 55%, transparent);
+    outline-offset: -4px;
+    user-select: none;
+  }
+  .seal--md {
+    width: 2.6rem;
+    height: 2.6rem;
+    font-size: 1.5rem;
+  }
+  .seal--sm {
+    width: 1.8rem;
+    height: 1.8rem;
+    font-size: 1rem;
+    outline-offset: -3px;
+  }
+</style>

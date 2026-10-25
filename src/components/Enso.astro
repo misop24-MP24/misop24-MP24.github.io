@@ -1,0 +1,77 @@
+---
+import { ensoGeometry } from '../lib/enso';
+
+interface Props {
+  seed?: number;
+  // true にすると、表示されたときに筆で描くように現れます
+  animate?: boolean;
+  class?: string;
+  // 画像として読み上げたいときの説明(なければ装飾として扱います)
+  label?: string;
+}
+
+const { seed = 1, animate = false, class: className = '', label } = Astro.props;
+const { body, line, wmax } = ensoGeometry(seed);
+const uid = `enso-${String(seed).replace(/[^0-9a-z]/gi, '')}`;
+---
+
+<svg
+  class:list={['enso', className, { 'enso--animate': animate }]}
+  viewBox="0 0 200 200"
+  xmlns="http://www.w3.org/2000/svg"
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : 'true'}
+  focusable="false"
+>
+  <defs>
+    <filter id={`${uid}-rough`} x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" seed={seed} result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
+      <feGaussianBlur stdDeviation="0.3" />
+    </filter>
+    <mask id={`${uid}-reveal`} maskUnits="userSpaceOnUse" x="0" y="0" width="200" height="200">
+      <path
+        class="enso__reveal"
+        d={line}
+        pathLength="1"
+        fill="none"
+        stroke="#fff"
+        stroke-width={wmax * 2.2}
+        stroke-linecap="round"
+        stroke-linejoin="round"></path>
+    </mask>
+  </defs>
+  <g mask={`url(#${uid}-reveal)`}>
+    <path d={body} fill="currentColor" filter={`url(#${uid}-rough)`}></path>
+  </g>
+</svg>
+
+<style>
+  .enso {
+    display: block;
+    width: 100%;
+    height: auto;
+    color: var(--sumi);
+    overflow: visible;
+  }
+  .enso__reveal {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+  .enso--animate .enso__reveal {
+    stroke-dashoffset: 1;
+    animation: enso-draw 2.6s cubic-bezier(0.45, 0.05, 0.25, 1) 0.3s forwards;
+  }
+  @keyframes enso-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .enso--animate .enso__reveal {
+      animation: none;
+      stroke-dashoffset: 0;
+    }
+  }
+</style>

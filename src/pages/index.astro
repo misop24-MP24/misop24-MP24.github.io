@@ -1,0 +1,182 @@
+---
+import Base from '../layouts/Base.astro';
+import Enso from '../components/Enso.astro';
+import Seal from '../components/Seal.astro';
+import WorkCard from '../components/WorkCard.astro';
+import { SITE, LINKS } from '../config';
+import { getPublishedWorks } from '../lib/works';
+
+const works = await getPublishedWorks();
+const latest = works.slice(0, 3);
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE.name,
+    url: SITE.url,
+    inLanguage: 'ja',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: SITE.name,
+    url: SITE.url,
+    jobTitle: SITE.role,
+    ...(LINKS.length > 0 ? { sameAs: LINKS.map((l) => l.url) } : {}),
+  },
+];
+---
+
+<Base jsonLd={jsonLd}>
+  <section class="hero">
+    <div class="container hero__inner">
+      <div class="hero__enso">
+        <Enso seed={3} animate />
+        <h1 class="hero__name">
+          <span class="hero__name-main">{SITE.name}</span>
+          <span class="hero__name-role">{SITE.role}</span>
+        </h1>
+      </div>
+      <div class="hero__side">
+        <p class="hero__tagline">{SITE.tagline}</p>
+        <Seal />
+      </div>
+    </div>
+    <p class="hero__lead">{SITE.lead}</p>
+  </section>
+
+  <section class="latest" aria-labelledby="latest-title">
+    <div class="container">
+      <hr class="brush-rule" />
+      <h2 id="latest-title" class="section-title">作品</h2>
+
+      {
+        latest.length > 0 ? (
+          <>
+            <div class="grid">
+              {latest.map((work) => (
+                <WorkCard work={work} />
+              ))}
+            </div>
+            <p class="more">
+              <a href="/works/">作品をすべて見る</a>
+            </p>
+          </>
+        ) : (
+          <div class="empty">
+            <div class="empty__enso">
+              <Enso seed={11} />
+            </div>
+            <p>作品は、準備中です。</p>
+          </div>
+        )
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    padding-top: clamp(1rem, 4vw, 3rem);
+    padding-bottom: 2rem;
+  }
+  .hero__inner {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: clamp(1.2rem, 4vw, 3rem);
+  }
+  .hero__enso {
+    position: relative;
+    width: min(66vw, 30rem);
+  }
+  .hero__name {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    text-align: center;
+    animation: rise 1.8s ease 1.2s both;
+  }
+  .hero__name-main {
+    font-size: clamp(1.5rem, 5.2vw, 2.5rem);
+    letter-spacing: 0.22em;
+    padding-left: 0.22em; /* 字間ぶんの中央ずれを直す */
+    font-weight: 500;
+  }
+  .hero__name-role {
+    font-size: clamp(0.72rem, 2vw, 0.9rem);
+    letter-spacing: 0.5em;
+    padding-left: 0.5em;
+    color: var(--sumi-soft);
+  }
+  .hero__side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.6rem;
+    padding-top: clamp(1rem, 5vw, 3.4rem);
+    animation: rise 1.8s ease 1.8s both;
+  }
+  .hero__tagline {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    margin: 0;
+    font-size: clamp(1rem, 2.6vw, 1.4rem);
+    letter-spacing: 0.5em;
+    line-height: 1.6;
+  }
+  .hero__lead {
+    text-align: center;
+    margin: clamp(1.5rem, 5vw, 3rem) 0 0;
+    letter-spacing: 0.3em;
+    color: var(--sumi-mid);
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(0.6rem);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .latest {
+    margin-top: clamp(3rem, 8vw, 6rem);
+  }
+  .section-title {
+    text-align: center;
+    font-size: 1.1rem;
+    letter-spacing: 0.6em;
+    padding-left: 0.6em;
+    margin: 3.4rem 0 3.6rem;
+    color: var(--sumi-mid);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 17rem));
+    justify-content: center;
+    gap: 4.4rem 3rem;
+  }
+  .more {
+    text-align: center;
+    margin: 4.4rem 0 0;
+    letter-spacing: 0.3em;
+  }
+  .empty {
+    text-align: center;
+    color: var(--sumi-soft);
+    padding-bottom: 2rem;
+  }
+  .empty__enso {
+    width: 7rem;
+    margin: 0 auto 1.4rem;
+    opacity: 0.55;
+  }
+</style>

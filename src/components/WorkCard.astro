@@ -1,0 +1,107 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { Image } from 'astro:assets';
+import Enso from './Enso.astro';
+
+interface Props {
+  work: CollectionEntry<'works'>;
+}
+
+const { work } = Astro.props;
+const { title, summary, cover, tags, date } = work.data;
+
+// 表紙画像がない作品には、作品ごとに形の違う円相を出します
+const seed = [...work.id].reduce((sum, ch) => (sum * 31 + ch.charCodeAt(0)) % 9973, 7);
+const year = date.getFullYear();
+---
+
+<a class="work" href={`/works/${work.id}/`}>
+  <div class="work__circle">
+    {
+      cover ? (
+        <Image src={cover} alt="" width={480} height={480} fit="cover" loading="lazy" class="work__img" />
+      ) : (
+        <div class="work__placeholder">
+          <Enso seed={seed} />
+        </div>
+      )
+    }
+  </div>
+  <h3 class="work__title">{title}</h3>
+  <p class="work__summary">{summary}</p>
+  <p class="work__meta">
+    <span>{year}</span>
+    {tags.slice(0, 3).map((t) => <span>{t}</span>)}
+  </p>
+</a>
+
+<style>
+  .work {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    max-width: 17rem;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .work__circle {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--washi-2);
+    margin-bottom: 1.6rem;
+    /* 外側の細い輪。触れると、広がって濃くなる */
+    outline: 1px solid var(--line);
+    outline-offset: 0.55rem;
+    transition:
+      outline-offset 0.6s cubic-bezier(0.3, 0.1, 0.2, 1),
+      outline-color 0.6s;
+  }
+  .work:hover .work__circle,
+  .work:focus-visible .work__circle {
+    outline-color: var(--sumi);
+    outline-offset: 0.9rem;
+  }
+  .work :global(.work__img) {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    /* 水墨画のように、少し色を抜いておく。触れると色が戻る */
+    filter: grayscale(0.5) contrast(1.02);
+    transition: filter 0.7s;
+  }
+  .work:hover :global(.work__img),
+  .work:focus-visible :global(.work__img) {
+    filter: none;
+  }
+  .work__placeholder {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    padding: 6%;
+    border-radius: 50%;
+  }
+  .work__title {
+    font-size: 1.1rem;
+    margin-bottom: 0.4rem;
+  }
+  .work__summary {
+    color: var(--sumi-mid);
+    font-size: 0.9rem;
+    line-height: 1.8;
+    margin: 0 0 0.6rem;
+  }
+  .work__meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 1rem;
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    color: var(--sumi-soft);
+  }
+</style>
