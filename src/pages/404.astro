@@ -1,11 +1,11 @@
 ---
 import Base from '../layouts/Base.astro';
-import InkEnso from '../components/InkEnso.astro';
+import Ripples from '../components/Ripples.astro';
 ---
 
 <Base title="ページが見つかりません" description="お探しのページは見つかりませんでした。" noindex>
   <section class="lost wrap">
-    <div class="lost__enso"><InkEnso seed={19} /></div>
+    <div class="lost__ripples"><Ripples seed={5} /></div>
     <h1>このページは見つかりません</h1>
     <p><a class="ink-link" href="/">トップへ戻る</a></p>
   </section>
@@ -21,9 +21,10 @@ import InkEnso from '../components/InkEnso.astro';
     gap: 1.6rem;
     padding-top: 6rem;
   }
-  .lost__enso {
+  .lost__ripples {
     width: min(15rem, 56vw);
     margin-bottom: 1rem;
+    color: var(--ink-mid);
   }
   h1 {
     font-size: 1.05rem;
@@ -31,6 +32,6 @@ import InkEnso from '../components/InkEnso.astro';
   }
   p {
     letter-spacing: 0.2em;
-    color: var(--usuzumi);
+    color: var(--mist);
   }
 </style>

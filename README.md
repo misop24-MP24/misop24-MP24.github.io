@@ -1,6 +1,6 @@
 # misop24 ポートフォリオ
 
-禅(円・墨)をテーマにした、ゲーム作品のポートフォリオサイトです。
+波・波紋をテーマにした、ゲーム作品のポートフォリオサイトです。
 Astro で作っていて、GitHub Pages で公開します。
 
 サイト: https://misop24-mp24.github.io
@@ -18,13 +18,13 @@ Astro で作っていて、GitHub Pages で公開します。
 
 ## 設定を変える
 
-`src/config.ts` に、活動名、説明文、落款の文字、トップの円相の形(`ensoSeed`)、リンク(X、itch.io、Steam)、紹介ページの文章があります。
+`src/config.ts` に、活動名、説明文、リンク(X、itch.io、Steam)、紹介ページの文章があります。
 
 ## デザインを変える
 
-- 色: `src/styles/global.css` の先頭にある `--paper`(白砂)、`--ink`(青墨)、`--shu`(朱)。`--ink-rgb` も `--ink` と同じ色にします
-- 毛筆の円相(かすれ・にじみ): `src/lib/brush.ts`
-- 開いたときの演出: `src/components/InkEnso.astro` と `src/pages/index.astro`
+- 色: `src/styles/global.css` の先頭にある `--paper`(水面の色)、`--ink`(文字の色)
+- トップの水面(波の速さ、光、名前の揺らぎ、開いたときの演出): `src/components/Water.astro`
+- 波紋の線画(アイコン、紹介ページ、写真がない作品): `src/components/Ripples.astro`
 
 ## 手元で確認する(任意)
 

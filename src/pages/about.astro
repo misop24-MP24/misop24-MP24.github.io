@@ -1,12 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
-import InkEnso from '../components/InkEnso.astro';
+import Ripples from '../components/Ripples.astro';
 import { SITE, LINKS, ABOUT } from '../config';
 ---
 
 <Base title="紹介" description={`${SITE.name}の紹介ページです。${ABOUT[0] ?? ''}`}>
   <section class="about wrap">
-    <div class="about__enso"><InkEnso seed={11} /></div>
+    <div class="about__ripples"><Ripples seed={2} /></div>
     <div class="about__text">
       <h1 class="about__name">{SITE.name}</h1>
       <div class="prose">
@@ -40,10 +40,10 @@ import { SITE, LINKS, ABOUT } from '../config';
     gap: clamp(2.4rem, 7vw, 7rem);
     align-items: center;
   }
-  .about__enso {
+  .about__ripples {
     width: 100%;
     max-width: 30rem;
-    rotate: 150deg;
+    color: var(--ink-mid);
   }
   .about__name {
     font-family: var(--roman);
@@ -66,7 +66,7 @@ import { SITE, LINKS, ABOUT } from '../config';
     .about {
       grid-template-columns: 1fr;
     }
-    .about__enso {
+    .about__ripples {
       max-width: 16rem;
     }
   }

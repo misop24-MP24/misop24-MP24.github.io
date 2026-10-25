@@ -5,8 +5,7 @@ import '@fontsource/cormorant-garamond/300.css';
 import '@fontsource/cormorant-garamond/400.css';
 import '../styles/global.css';
 import { SITE, LINKS } from '../config';
-import Enso from '../components/Enso.astro';
-import Seal from '../components/Seal.astro';
+import Ripples from '../components/Ripples.astro';
 
 interface Props {
   // ページのタイトル。トップページだけは省略します
@@ -38,8 +37,8 @@ const year = new Date().getFullYear();
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#e5e3dd" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e3e7e6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1416" media="(prefers-color-scheme: dark)" />
     <script is:inline>document.documentElement.classList.add('js');</script>
 
     <title>{pageTitle}</title>
@@ -69,7 +68,7 @@ const year = new Date().getFullYear();
 
     <header class="site-header wrap">
       <a class="mark" href="/" aria-label={`${SITE.name} トップへ`}>
-        <Enso seed={7} />
+        <Ripples variant="mark" />
       </a>
       <nav aria-label="メイン">
         <ul class="nav">
@@ -88,7 +87,7 @@ const year = new Date().getFullYear();
     </main>
 
     <footer class="site-footer wrap">
-      <Seal size="sm" />
+      <span class="site-footer__mark"><Ripples variant="mark" /></span>
       {
         LINKS.length > 0 && (
           <ul class="site-footer__links">
@@ -120,10 +119,18 @@ const year = new Date().getFullYear();
   .mark {
     display: block;
     width: 1.75rem;
-    transition: transform 1.4s var(--ease-out);
   }
-  .mark:hover {
-    transform: rotate(160deg);
+  .mark :global(circle) {
+    transition: r 0.9s var(--ease-out);
+  }
+  .mark:hover :global(circle:nth-child(1)) {
+    r: 6;
+  }
+  .mark:hover :global(circle:nth-child(2)) {
+    r: 13;
+  }
+  .mark:hover :global(circle:nth-child(3)) {
+    r: 19;
   }
   .nav {
     display: flex;
@@ -138,7 +145,7 @@ const year = new Date().getFullYear();
     background-size: 100% 1px;
   }
 
-  /* トップでは、円相を描き終えてから現れる */
+  /* トップでは、最初の波紋が広がってから現れる */
   :global(html.js.is-home) .site-header,
   :global(html.js.is-home) .site-footer {
     opacity: 0;
@@ -157,7 +164,11 @@ const year = new Date().getFullYear();
     margin-top: clamp(6rem, 14vw, 11rem);
     padding-bottom: clamp(1.6rem, 3vw, 2.4rem);
     font-size: 0.82rem;
-    color: var(--usuzumi);
+    color: var(--mist);
+  }
+  .site-footer__mark {
+    width: 1.3rem;
+    color: var(--ink);
   }
   .site-footer__links {
     display: flex;

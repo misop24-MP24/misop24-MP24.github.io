@@ -1,0 +1,442 @@
+---
+// トップの水面。
+// 本物の波の動き(波動方程式)を計算して、光の反射と、水の下にある名前の揺らぎを描きます。
+// 開いたとき: 雫が落ちて波紋が広がり、その波が通ったところから名前が浮かび上がります。
+// そのあと: カーソルを動かすと水面が揺れ、クリック(タップ)すると雫が落ちます。
+// WebGL2 が使えない端末では、静かな波紋の線と名前だけを表示します。
+interface Props {
+  name: string;
+}
+const { name } = Astro.props;
+const letters = [...name];
+---
+
+<ripple-water class="water">
+  <canvas class="water__canvas" aria-hidden="true"></canvas>
+  <svg class="water__still" viewBox="0 0 200 200" aria-hidden="true" preserveAspectRatio="xMidYMid slice">
+    {[14, 26, 40, 56, 74, 94, 116, 140].map((r, i) => <circle cx="100" cy="100" r={r} style={`opacity:${1 - i * 0.1}`} />)}
+  </svg>
+  <h1 class="water__name" aria-label={name}>
+    {letters.map((ch) => <span aria-hidden="true">{ch}</span>)}
+  </h1>
+</ripple-water>
+
+<style>
+  .water {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+  .water__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.8s var(--ease);
+  }
+  .water__still {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(110vw, 110vh);
+    height: max(110vw, 110vh);
+    translate: -50% -50%;
+    fill: none;
+    stroke: var(--hair);
+    stroke-width: 0.12;
+  }
+  .water__name {
+    position: relative;
+    font-family: var(--roman);
+    font-weight: 300;
+    font-size: clamp(2.8rem, 11vmin, 7.2rem);
+    letter-spacing: 0.16em;
+    padding-left: 0.16em;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .water__name span {
+    display: inline-block;
+  }
+
+  /* 水面が動いているときは、名前は水の中(canvas)に描くので、文字そのものは見えなくする */
+  .water.is-live .water__canvas {
+    opacity: 1;
+  }
+  .water.is-live .water__still {
+    display: none;
+  }
+  .water.is-live .water__name {
+    color: transparent;
+  }
+</style>
+
+<script>
+  const VERT = `#version 300 es
+  in vec2 p;
+  void main() { gl_Position = vec4(p, 0.0, 1.0); }`;
+
+  const FRAG = `#version 300 es
+  precision highp float;
+  uniform sampler2D uH;      // 水面の高さ
+  uniform sampler2D uText;   // 水の下の名前
+  uniform vec2 uRes;         // 画面の大きさ(px)
+  uniform vec2 uTexel;       // 高さの1マス
+  uniform vec3 uBase;        // 水の色
+  uniform vec3 uInk;         // 文字の色
+  uniform vec3 uLight;       // 光の色
+  uniform vec3 uShade;       // 影の色
+  uniform vec3 uReveal;      // 波紋の中心(px)と、名前が見えている半径(px)
+  uniform float uDark;
+  out vec4 o;
+  void main() {
+    vec2 uv = gl_FragCoord.xy / uRes;
+    uv.y = 1.0 - uv.y;
+    float hl = texture(uH, uv - vec2(uTexel.x, 0.0)).r;
+    float hr = texture(uH, uv + vec2(uTexel.x, 0.0)).r;
+    float hu = texture(uH, uv - vec2(0.0, uTexel.y)).r;
+    float hd = texture(uH, uv + vec2(0.0, uTexel.y)).r;
+    vec3 n = normalize(vec3((hl - hr) * 3.2, (hu - hd) * 3.2, 1.0));
+
+    // 空の映り込み(上ほど明るい、ごくわずかな階調)
+    vec3 col = min(vec3(1.0), uBase * (1.0 + (1.0 - uv.y) * 0.03));
+
+    // 光: 斜め上からの光で、波の斜面に明暗がつく
+    vec3 L = normalize(vec3(-0.45, 0.55, 0.72));
+    float lit = dot(n, L) - dot(vec3(0.0, 0.0, 1.0), L);
+    col = mix(col, lit > 0.0 ? uLight : uShade, clamp(abs(lit) * 2.6, 0.0, 0.85));
+    vec3 R = reflect(-L, n);
+    float spec = pow(max(R.z, 0.0), 220.0);
+    col += uLight * spec * mix(0.55, 0.35, uDark) * smoothstep(0.0005, 0.02, length(n.xy));
+
+    // 水の下の名前: 波の傾きで、屈折して揺らぐ
+    vec2 tuv = uv + n.xy * 0.026;
+    float ta = texture(uText, tuv).a;
+    float d = distance(gl_FragCoord.xy * vec2(1.0, -1.0) + vec2(0.0, uRes.y), uReveal.xy);
+    float rev = 1.0 - smoothstep(uReveal.z - uRes.x * 0.12, uReveal.z, d);
+    col = mix(col, uInk, ta * rev * 0.94);
+
+    o = vec4(col, 1.0);
+  }`;
+
+  function cssColor(name: string, fallback: [number, number, number]): [number, number, number] {
+    const probe = document.createElement('span');
+    probe.style.color = `var(${name})`;
+    probe.style.display = 'none';
+    document.body.appendChild(probe);
+    const m = getComputedStyle(probe).color.match(/[\d.]+/g);
+    probe.remove();
+    return m && m.length >= 3 ? [Number(m[0]) / 255, Number(m[1]) / 255, Number(m[2]) / 255] : fallback;
+  }
+
+  class RippleWater extends HTMLElement {
+    private gl!: WebGL2RenderingContext;
+    private canvas!: HTMLCanvasElement;
+    private W = 0; // 計算のマス目(横)
+    private H = 0;
+    private h!: Float32Array;
+    private hNext!: Float32Array;
+    private v!: Float32Array;
+    private edge!: Float32Array;
+    private texH!: WebGLTexture;
+    private texText!: WebGLTexture;
+    private u: Record<string, WebGLUniformLocation | null> = {};
+    private css = { w: 0, h: 0 };
+    private dpr = 1;
+    private reveal = { x: 0, y: 0, r: 0, speed: 0, active: false };
+    private visible = true;
+    private reduce = false;
+    private last = { x: -1, y: -1, t: 0 };
+
+    connectedCallback() {
+      this.canvas = this.querySelector('canvas')!;
+      this.reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const gl = this.canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false, powerPreference: 'low-power' });
+      if (!gl || !this.setup(gl)) {
+        this.finish();
+        return;
+      }
+      this.gl = gl;
+      document.fonts.ready.then(() => this.start());
+    }
+
+    private setup(gl: WebGL2RenderingContext) {
+      const sh = (type: number, src: string) => {
+        const s = gl.createShader(type)!;
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+      };
+      const vs = sh(gl.VERTEX_SHADER, VERT);
+      const fs = sh(gl.FRAGMENT_SHADER, FRAG);
+      if (!vs || !fs) return false;
+      const prog = gl.createProgram()!;
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return false;
+      gl.useProgram(prog);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, 'p');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      for (const k of ['uH', 'uText', 'uRes', 'uTexel', 'uBase', 'uInk', 'uLight', 'uShade', 'uReveal', 'uDark']) this.u[k] = gl.getUniformLocation(prog, k);
+      const mk = () => {
+        const t = gl.createTexture()!;
+        gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        return t;
+      };
+      this.texH = mk();
+      this.texText = mk();
+      gl.uniform1i(this.u.uH, 0);
+      gl.uniform1i(this.u.uText, 1);
+      return true;
+    }
+
+    // 画面の大きさに合わせて、計算のマス目と名前の絵を作り直す
+    private resize() {
+      const r = this.getBoundingClientRect();
+      this.css = { w: r.width, h: r.height };
+      this.dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+      this.canvas.width = Math.round(r.width * this.dpr);
+      this.canvas.height = Math.round(r.height * this.dpr);
+      const cols = r.width < 700 ? 220 : 420;
+      this.W = cols;
+      this.H = Math.max(40, Math.round((cols * r.height) / r.width));
+      const n = this.W * this.H;
+      this.h = new Float32Array(n);
+      this.hNext = new Float32Array(n);
+      this.v = new Float32Array(n);
+      // 端で波が跳ね返らないように、まわりを少しずつ静める
+      this.edge = new Float32Array(n);
+      const band = 14;
+      for (let y = 0; y < this.H; y++)
+        for (let x = 0; x < this.W; x++) {
+          const d = Math.min(x, y, this.W - 1 - x, this.H - 1 - y);
+          this.edge[y * this.W + x] = d >= band ? 0.996 : 0.9 + (0.096 * d) / band;
+        }
+      this.drawText();
+      const gl = this.gl;
+      gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+      gl.uniform2f(this.u.uRes, this.canvas.width, this.canvas.height);
+      gl.uniform2f(this.u.uTexel, 1 / this.W, 1 / this.H);
+      // 1回の計算で波が進む距離(px)
+      this.reveal.speed = (this.css.w / this.W) * 0.72;
+    }
+
+    private drawText() {
+      const c = document.createElement('canvas');
+      c.width = this.canvas.width;
+      c.height = this.canvas.height;
+      const ctx = c.getContext('2d')!;
+      const host = this.getBoundingClientRect();
+      const h1 = this.querySelector('h1')!;
+      const style = getComputedStyle(h1);
+      ctx.scale(this.dpr, this.dpr);
+      ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      ctx.fillStyle = '#000';
+      ctx.textBaseline = 'alphabetic';
+      for (const span of h1.querySelectorAll('span')) {
+        const r = span.getBoundingClientRect();
+        const m = ctx.measureText(span.textContent ?? '');
+        const asc = m.fontBoundingBoxAscent ?? parseFloat(style.fontSize) * 0.8;
+        const desc = m.fontBoundingBoxDescent ?? parseFloat(style.fontSize) * 0.2;
+        const y = r.top - host.top + (r.height - (asc + desc)) / 2 + asc;
+        ctx.fillText(span.textContent ?? '', r.left - host.left, y);
+      }
+      const gl = this.gl;
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.texText);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c);
+    }
+
+    private colors() {
+      const gl = this.gl;
+      const base = cssColor('--paper', [0.89, 0.906, 0.902]);
+      const ink = cssColor('--ink', [0.106, 0.165, 0.184]);
+      const dark = (base[0] + base[1] + base[2]) / 3 < 0.4;
+      const light: [number, number, number] = dark ? [0.82, 0.86, 0.87] : [1, 1, 1];
+      const shade: [number, number, number] = dark
+        ? [base[0] * 0.55, base[1] * 0.55, base[2] * 0.55]
+        : [base[0] * 0.72 + ink[0] * 0.28, base[1] * 0.72 + ink[1] * 0.28, base[2] * 0.72 + ink[2] * 0.28];
+      gl.uniform3f(this.u.uBase, ...base);
+      gl.uniform3f(this.u.uInk, ...ink);
+      gl.uniform3f(this.u.uLight, ...light);
+      gl.uniform3f(this.u.uShade, ...shade);
+      gl.uniform1f(this.u.uDark, dark ? 1 : 0);
+    }
+
+    // 雫を落とす(x, y は px、r はマス目の数)
+    drop(x: number, y: number, r: number, strength: number) {
+      const cx = (x / this.css.w) * this.W;
+      const cy = (y / this.css.h) * this.H;
+      const x0 = Math.max(1, Math.floor(cx - r));
+      const x1 = Math.min(this.W - 2, Math.ceil(cx + r));
+      const y0 = Math.max(1, Math.floor(cy - r));
+      const y1 = Math.min(this.H - 2, Math.ceil(cy + r));
+      for (let j = y0; j <= y1; j++)
+        for (let i = x0; i <= x1; i++) {
+          const d = Math.hypot(i - cx, j - cy) / r;
+          if (d < 1) this.h[j * this.W + i] -= strength * (0.5 + 0.5 * Math.cos(Math.PI * d));
+        }
+    }
+
+    private step() {
+      const { W, H, h, v, edge } = this;
+      const next = this.hNext;
+      for (let y = 1; y < H - 1; y++) {
+        const row = y * W;
+        for (let x = 1; x < W - 1; x++) {
+          const i = row + x;
+          const avg = (h[i - 1] + h[i + 1] + h[i - W] + h[i + W]) * 0.25;
+          let vi = (v[i] + (avg - h[i]) * 1.9) * edge[i];
+          v[i] = vi;
+          next[i] = (h[i] + vi) * edge[i];
+        }
+      }
+      this.hNext = h;
+      this.h = next;
+    }
+
+    private render() {
+      const gl = this.gl;
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.texH);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, this.W, this.H, 0, gl.RED, gl.FLOAT, this.h);
+      gl.uniform3f(this.u.uReveal, this.reveal.x * this.dpr, this.reveal.y * this.dpr, this.reveal.r * this.dpr);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    private finish() {
+      document.documentElement.classList.add('intro-done');
+      this.dispatchEvent(new CustomEvent('water:done', { bubbles: true }));
+    }
+
+    private start() {
+      this.resize();
+      this.colors();
+      this.classList.add('is-live');
+      const cx = this.css.w / 2;
+      const cy = this.css.h / 2;
+      this.reveal.x = cx;
+      this.reveal.y = cy;
+
+      if (this.reduce) {
+        // 動きを減らす設定: 波紋が広がったあとの静かな一瞬を、1枚だけ描く
+        this.drop(cx, cy, 5, 2.2);
+        for (let i = 0; i < 110; i++) this.step();
+        this.reveal.r = 1e5;
+        this.render();
+        this.finish();
+        return;
+      }
+
+      let seen = false;
+      try {
+        seen = sessionStorage.getItem('ripple-seen') === '1';
+        sessionStorage.setItem('ripple-seen', '1');
+      } catch {}
+      // 時計は「描いたコマ」で進める(端末が一瞬止まっても、順番が崩れないように)
+      let clock = 0;
+      let lastNow = 0;
+      const firstAt = seen ? 120 : 650; // 雫が落ちるまでの静けさ
+      let dropped = false;
+      let second = false;
+      let done = false;
+      let stepsSinceDrop = 0;
+      let nextAmbient = 6000;
+
+      // 画面に見えていないときは止める
+      new IntersectionObserver(([e]) => (this.visible = e.isIntersecting)).observe(this);
+
+      // カーソルで水面をなでる、クリックで雫
+      this.addEventListener('pointermove', (e) => {
+        const r = this.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        const y = e.clientY - r.top;
+        const now = performance.now();
+        if (this.last.x >= 0) {
+          const dist = Math.hypot(x - this.last.x, y - this.last.y);
+          const speed = dist / Math.max(8, now - this.last.t);
+          if (dist > 2) this.drop(x, y, e.pointerType === 'mouse' ? 3.2 : 4, Math.min(0.32, 0.06 + speed * 0.16));
+        }
+        this.last = { x, y, t: now };
+      });
+      this.addEventListener('pointerleave', () => (this.last.x = -1));
+      this.addEventListener('pointerdown', (e) => {
+        const r = this.getBoundingClientRect();
+        this.drop(e.clientX - r.left, e.clientY - r.top, 5, 1.6);
+      });
+
+      let raf = 0;
+      let resizeT = 0;
+      new ResizeObserver(() => {
+        clearTimeout(resizeT);
+        resizeT = window.setTimeout(() => {
+          if (Math.abs(this.getBoundingClientRect().width - this.css.w) > 1 || Math.abs(this.getBoundingClientRect().height - this.css.h) > 60) {
+            this.resize();
+            this.reveal.x = this.css.w / 2;
+            this.reveal.y = this.css.h / 2;
+          }
+        }, 150);
+      }).observe(this);
+
+      const frame = (now: number) => {
+        raf = requestAnimationFrame(frame);
+        const dt = lastNow ? Math.min(50, now - lastNow) : 16;
+        lastNow = now;
+        if (!this.visible || document.hidden) return;
+        clock += dt;
+        const t = clock;
+        if (!dropped && t >= firstAt) {
+          dropped = true;
+          this.drop(cx, cy, seen ? 4 : 5.5, seen ? 1.8 : 2.6);
+          this.reveal.active = true;
+        }
+        if (dropped && !second && t >= firstAt + (seen ? 500 : 1100)) {
+          second = true;
+          // 少し離れたところに、小さな雫。ふたつの波紋が重なって干渉する
+          this.drop(this.css.w * 0.73, this.css.h * 0.7, 3.5, 1.1);
+        }
+        if (t > nextAmbient) {
+          // ときおり、どこかに小さな雫
+          nextAmbient = t + 4500 + Math.random() * 5000;
+          // 名前の上には落とさない
+          let ax = 0;
+          let ay = 0;
+          do {
+            ax = 0.1 + Math.random() * 0.8;
+            ay = 0.12 + Math.random() * 0.76;
+          } while (Math.abs(ax - 0.5) < 0.24 && Math.abs(ay - 0.5) < 0.14);
+          this.drop(this.css.w * ax, this.css.h * ay, 3, 0.5);
+        }
+        for (let k = 0; k < 2; k++) {
+          this.step();
+          if (this.reveal.active) {
+            stepsSinceDrop++;
+            this.reveal.r = stepsSinceDrop * this.reveal.speed;
+          }
+        }
+        this.render();
+        if (!done && this.reveal.active && this.reveal.r > Math.hypot(this.css.w, this.css.h) * 0.18) {
+          done = true;
+          this.finish();
+        }
+      };
+      raf = requestAnimationFrame(frame);
+    }
+  }
+
+  if (!customElements.get('ripple-water')) customElements.define('ripple-water', RippleWater);
+</script>

@@ -1,10 +1,10 @@
 ---
 // 作品の一覧。大きな作品名を縦に並べます。
-// マウスを乗せると、カーソルの位置に画面写真が墨のように丸く広がります。
+// マウスを乗せると、カーソルの位置に画面写真が丸く広がり、そのまわりに波紋が立ちます。
 // スマホでは、各行の右に小さな丸い写真が出ます。
 import type { CollectionEntry } from 'astro:content';
 import { getImage } from 'astro:assets';
-import InkEnso from './InkEnso.astro';
+import Ripples from './Ripples.astro';
 
 interface Props {
   works: CollectionEntry<'works'>[];
@@ -25,12 +25,18 @@ const items = await Promise.all(
 <work-list class="list">
   <ul>
     {
-      items.map(({ work, img, thumb, seed }, i) => (
+      items.map(({ work, thumb, seed }, i) => (
         <li>
           <a class="row" href={`/works/${work.id}/`} data-index={i}>
             <span class="row__title">{work.data.title}</span>
             <span class="row__thumb" aria-hidden="true">
-              {thumb ? <img src={thumb} alt="" width="80" height="80" loading="lazy" decoding="async" /> : <InkEnso seed={seed} />}
+              {thumb ? (
+                <img src={thumb} alt="" width="80" height="80" loading="lazy" decoding="async" />
+              ) : (
+                <span class="row__rings">
+                  <Ripples seed={seed} />
+                </span>
+              )}
             </span>
             <span class="row__year">{work.data.date.getFullYear()}</span>
           </a>
@@ -40,10 +46,19 @@ const items = await Promise.all(
   </ul>
 
   <div class="preview" aria-hidden="true">
+    <span class="preview__ring"></span>
+    <span class="preview__ring"></span>
+    <span class="preview__ring"></span>
     {
       items.map(({ img, seed }, i) => (
         <div class="preview__item" data-index={i}>
-          {img ? <img src={img} alt="" loading="lazy" decoding="async" /> : <div class="preview__enso"><InkEnso seed={seed} /></div>}
+          {img ? (
+            <img src={img} alt="" loading="lazy" decoding="async" />
+          ) : (
+            <div class="preview__rings">
+              <Ripples seed={seed} />
+            </div>
+          )}
         </div>
       ))
     }
@@ -75,7 +90,7 @@ const items = await Promise.all(
     font-size: clamp(1rem, 1.6vw, 1.25rem);
     font-weight: 300;
     letter-spacing: 0.08em;
-    color: var(--usuzumi);
+    color: var(--mist);
     font-variant-numeric: oldstyle-nums;
   }
   .row__thumb {
@@ -91,6 +106,12 @@ const items = await Promise.all(
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+  .row__rings {
+    display: block;
+    width: 100%;
+    height: 100%;
+    color: var(--ink-mid);
   }
 
   /* 他の行を薄くして、指している作品だけを浮かび上がらせる */
@@ -134,19 +155,17 @@ const items = await Promise.all(
     position: absolute;
     inset: 0;
     margin: -50% 0 0 -50%;
+    border-radius: 50%;
     overflow: hidden;
-    /* 縁が紙に滲んだような、少しいびつな円 */
-    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='f' x='-25%' y='-25%' width='150%' height='150%'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='2' seed='5' result='a'/><feDisplacementMap in='SourceGraphic' in2='a' scale='5' result='b'/><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='8' result='c'/><feDisplacementMap in='b' in2='c' scale='1.6'/></filter><circle cx='100' cy='100' r='90' filter='url(%23f)'/></svg>") center / 100% 100% no-repeat;
-    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='f' x='-25%' y='-25%' width='150%' height='150%'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='2' seed='5' result='a'/><feDisplacementMap in='SourceGraphic' in2='a' scale='5' result='b'/><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='8' result='c'/><feDisplacementMap in='b' in2='c' scale='1.6'/></filter><circle cx='100' cy='100' r='90' filter='url(%23f)'/></svg>") center / 100% 100% no-repeat;
     clip-path: circle(0% at 50% 50%);
-    transition: clip-path 0.7s var(--ease-out);
+    transition: clip-path 0.8s var(--ease-out);
   }
   .preview__item img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    scale: 1.25;
-    transition: scale 1.2s var(--ease-out);
+    scale: 1.3;
+    transition: scale 1.4s var(--ease-out);
   }
   .preview__item.is-on {
     clip-path: circle(50% at 50% 50%);
@@ -154,11 +173,44 @@ const items = await Promise.all(
   .preview__item.is-on img {
     scale: 1;
   }
-  .preview__enso {
+  .preview__rings {
     width: 100%;
     height: 100%;
-    padding: 12%;
+    padding: 6%;
     background: var(--paper-deep);
+    color: var(--ink-mid);
+  }
+
+  /* 写真が現れるとき、まわりに広がって消える波紋 */
+  .preview__ring {
+    position: absolute;
+    inset: 0;
+    margin: -50% 0 0 -50%;
+    border-radius: 50%;
+    border: 1px solid var(--ink);
+    opacity: 0;
+  }
+  .preview.is-ripple .preview__ring {
+    animation: ring 1.6s var(--ease-out) both;
+  }
+  .preview.is-ripple .preview__ring:nth-child(2) {
+    animation-delay: 0.16s;
+  }
+  .preview.is-ripple .preview__ring:nth-child(3) {
+    animation-delay: 0.32s;
+  }
+  @keyframes ring {
+    0% {
+      scale: 0.6;
+      opacity: 0;
+    }
+    18% {
+      opacity: 0.45;
+    }
+    100% {
+      scale: 1.55;
+      opacity: 0;
+    }
   }
 </style>
 
@@ -178,8 +230,8 @@ const items = await Promise.all(
       let placed = false;
 
       const loop = () => {
-        // 少し遅れてついてくる(墨が紙に追いつくような間)
-        const k = reduce ? 1 : 0.14;
+        // 少し遅れてついてくる(水に浮かんでいるような間)
+        const k = reduce ? 1 : 0.12;
         x += (tx - x) * k;
         y += (ty - y) * k;
         preview.style.setProperty('--x', `${x}px`);
@@ -202,7 +254,15 @@ const items = await Promise.all(
         }
       });
 
-      const show = (i: number | null) => items.forEach((el, n) => el.classList.toggle('is-on', n === i));
+      const show = (i: number | null) => {
+        items.forEach((el, n) => el.classList.toggle('is-on', n === i));
+        if (i !== null && !reduce) {
+          // 波紋をもう一度立てる
+          preview.classList.remove('is-ripple');
+          void preview.offsetWidth;
+          preview.classList.add('is-ripple');
+        }
+      };
       this.querySelectorAll<HTMLElement>('.row').forEach((row) => {
         row.addEventListener('pointerenter', () => show(Number(row.dataset.index)));
         row.addEventListener('pointerleave', () => show(null));

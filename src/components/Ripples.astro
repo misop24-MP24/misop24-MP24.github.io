@@ -1,0 +1,57 @@
+---
+// 波紋の線画(SVG)。
+// mark:  ヘッダーやフッターの小さな印(3重の輪)
+// pair:  ふたつの雫の波紋が重なり合う図(紹介ページ、作品の写真がないとき)
+interface Props {
+  variant?: 'mark' | 'pair';
+  seed?: number;
+  class?: string;
+}
+const { variant = 'pair', seed = 1, class: className = '' } = Astro.props;
+
+// seed から、ふたつ目の雫の位置を決める
+const a = ((seed * 137) % 360) * (Math.PI / 180);
+const b = { x: 100 + Math.cos(a) * 34, y: 100 + Math.sin(a) * 34 };
+const first = Array.from({ length: 15 }, (_, i) => 4 + i * 6.4);
+const second = Array.from({ length: 10 }, (_, i) => 3 + i * 6.4);
+---
+
+{
+  variant === 'mark' ? (
+    <svg class:list={['ripples', 'ripples--mark', className]} viewBox="0 0 40 40" aria-hidden="true">
+      <circle cx="20" cy="20" r="3.2" />
+      <circle cx="20" cy="20" r="9.5" />
+      <circle cx="20" cy="20" r="17" />
+    </svg>
+  ) : (
+    <svg class:list={['ripples', 'ripples--pair', className]} viewBox="0 0 200 200" aria-hidden="true">
+      <g class="ripples__a">
+        {first.map((r, i) => (
+          <circle cx="100" cy="100" r={r} style={`opacity:${(1 - i / first.length) * 0.9 + 0.1}`} />
+        ))}
+      </g>
+      <g class="ripples__b">
+        {second.map((r, i) => (
+          <circle cx={b.x.toFixed(1)} cy={b.y.toFixed(1)} r={r} style={`opacity:${(1 - i / second.length) * 0.7 + 0.08}`} />
+        ))}
+      </g>
+    </svg>
+  )
+}
+
+<style>
+  .ripples {
+    display: block;
+    width: 100%;
+    height: auto;
+    fill: none;
+    stroke: currentColor;
+    overflow: visible;
+  }
+  .ripples--mark {
+    stroke-width: 1.4;
+  }
+  .ripples--pair {
+    stroke-width: 0.45;
+  }
+</style>
