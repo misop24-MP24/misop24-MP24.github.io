@@ -1,28 +1,36 @@
 ---
 import Base from '../layouts/Base.astro';
-import Enso from '../components/Enso.astro';
+import InkEnso from '../components/InkEnso.astro';
 ---
 
 <Base title="ページが見つかりません" description="お探しのページは見つかりませんでした。" noindex>
-  <div class="container lost">
-    <div class="lost__enso"><Enso seed={19} /></div>
-    <h1>ここには、何もありません。</h1>
-    <p><a href="/">トップへ戻る</a></p>
-  </div>
+  <section class="lost wrap">
+    <div class="lost__enso"><InkEnso seed={19} /></div>
+    <h1>このページは見つかりません</h1>
+    <p><a class="ink-link" href="/">トップへ戻る</a></p>
+  </section>
 </Base>
 
 <style>
   .lost {
+    min-height: 80vh;
+    display: grid;
+    place-content: center;
+    justify-items: center;
     text-align: center;
-    padding-block: 3rem;
+    gap: 1.6rem;
+    padding-top: 6rem;
   }
   .lost__enso {
-    width: min(14rem, 60vw);
-    margin: 0 auto 2rem;
+    width: min(15rem, 56vw);
+    margin-bottom: 1rem;
   }
   h1 {
-    font-size: 1.2rem;
-    letter-spacing: 0.3em;
-    margin-bottom: 2rem;
+    font-size: 1.05rem;
+    letter-spacing: 0.24em;
+  }
+  p {
+    letter-spacing: 0.2em;
+    color: var(--usuzumi);
   }
 </style>

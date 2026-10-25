@@ -1,4 +1,8 @@
 ---
+import '@fontsource/zen-old-mincho/400.css';
+import '@fontsource/zen-old-mincho/500.css';
+import '@fontsource/cormorant-garamond/300.css';
+import '@fontsource/cormorant-garamond/400.css';
 import '../styles/global.css';
 import { SITE, LINKS } from '../config';
 import Enso from '../components/Enso.astro';
@@ -15,26 +19,28 @@ interface Props {
   noindex?: boolean;
   // 検索エンジン向けの構造化データ(JSON)
   jsonLd?: Record<string, unknown>[];
+  // トップページのときは true(開いたときの演出を有効にします)
+  home?: boolean;
 }
 
-const { title, description = SITE.description, image, type = 'website', noindex = false, jsonLd = [] } = Astro.props;
+const { title, description = SITE.description, image, type = 'website', noindex = false, jsonLd = [], home = false } = Astro.props;
 
 const pageTitle = title ? `${title} | ${SITE.name}` : `${SITE.name} | ${SITE.role}`;
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const ogImage = image ?? new URL('/og.png', Astro.site).href;
 const path = Astro.url.pathname;
-const isWorks = path.startsWith('/works/');
 const year = new Date().getFullYear();
 ---
 
 <!doctype html>
-<html lang="ja">
+<html lang="ja" class:list={{ 'is-home': home }}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f3efe6" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e5e3dd" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
 
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
@@ -61,124 +67,111 @@ const year = new Date().getFullYear();
   <body>
     <a class="skip-link" href="#main">本文へ移動</a>
 
-    <header class="site-header">
-      <div class="container site-header__inner">
-        <a class="brand" href="/" aria-label={`${SITE.name} トップへ`}>
-          <span class="brand__mark"><Enso seed={7} /></span>
-          <span class="brand__name">{SITE.name}</span>
-        </a>
-        <nav aria-label="メイン">
-          <ul class="nav">
-            <li><a href="/works/" aria-current={isWorks ? 'page' : undefined}>作品</a></li>
-            <li><a href="/about/" aria-current={path.startsWith('/about/') ? 'page' : undefined}>紹介</a></li>
-          </ul>
-        </nav>
-      </div>
+    <header class="site-header wrap">
+      <a class="mark" href="/" aria-label={`${SITE.name} トップへ`}>
+        <Enso seed={7} />
+      </a>
+      <nav aria-label="メイン">
+        <ul class="nav">
+          <li>
+            <a class="ink-link" href="/works/" aria-current={path.startsWith('/works/') ? 'page' : undefined}>作品</a>
+          </li>
+          <li>
+            <a class="ink-link" href="/about/" aria-current={path.startsWith('/about/') ? 'page' : undefined}>紹介</a>
+          </li>
+        </ul>
+      </nav>
     </header>
 
     <main id="main">
       <slot />
     </main>
 
-    <footer class="site-footer">
-      <div class="container">
-        <hr class="brush-rule" />
-        <div class="site-footer__inner">
-          <Seal size="sm" />
-          {
-            LINKS.length > 0 && (
-              <ul class="site-footer__links">
-                {LINKS.map((l) => (
-                  <li>
-                    <a href={l.url} rel="me noopener" target="_blank">
-                      {l.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )
-          }
-          <small>© {year} {SITE.name}</small>
-        </div>
-      </div>
+    <footer class="site-footer wrap">
+      <Seal size="sm" />
+      {
+        LINKS.length > 0 && (
+          <ul class="site-footer__links">
+            {LINKS.map((l) => (
+              <li>
+                <a class="ink-link" href={l.url} rel="me noopener" target="_blank">
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+      <small>© {year} {SITE.name}</small>
     </footer>
   </body>
 </html>
 
 <style>
   .site-header {
-    padding-block: 1.4rem;
-  }
-  .site-header__inner {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 20;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    padding-block: clamp(1.1rem, 3vw, 2rem);
   }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.7rem;
-    text-decoration: none;
-    letter-spacing: 0.2em;
-    font-size: 1.05rem;
+  .mark {
+    display: block;
+    width: 1.75rem;
+    transition: transform 1.4s var(--ease-out);
   }
-  .brand__mark {
-    width: 1.9rem;
-    flex: none;
-    transition: transform 1.2s cubic-bezier(0.3, 0.1, 0.2, 1);
-  }
-  .brand:hover .brand__mark {
-    transform: rotate(120deg);
+  .mark:hover {
+    transform: rotate(160deg);
   }
   .nav {
     display: flex;
-    gap: 2rem;
+    gap: clamp(1.4rem, 3vw, 2.6rem);
     list-style: none;
     margin: 0;
     padding: 0;
+    font-size: 0.92rem;
+    letter-spacing: 0.32em;
   }
-  .nav a {
-    text-decoration: none;
-    letter-spacing: 0.3em;
-    padding-block: 0.4rem;
-    background: linear-gradient(currentColor, currentColor) bottom / 0 1px no-repeat;
-    transition: background-size 0.4s ease;
-  }
-  .nav a:hover,
   .nav a[aria-current='page'] {
     background-size: 100% 1px;
   }
 
-  .site-footer {
-    margin-top: 6rem;
-    padding-bottom: 2.4rem;
-    color: var(--sumi-soft);
-    font-size: 0.85rem;
+  /* トップでは、円相を描き終えてから現れる */
+  :global(html.js.is-home) .site-header,
+  :global(html.js.is-home) .site-footer {
+    opacity: 0;
+    transition: opacity 1.4s var(--ease) 0.5s;
   }
-  .site-footer__inner {
+  :global(html.js.is-home.intro-done) .site-header,
+  :global(html.js.is-home.intro-done) .site-footer {
+    opacity: 1;
+  }
+
+  .site-footer {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.8rem 1.6rem;
-    padding-top: 2rem;
+    gap: 0.8rem 2rem;
+    margin-top: clamp(6rem, 14vw, 11rem);
+    padding-bottom: clamp(1.6rem, 3vw, 2.4rem);
+    font-size: 0.82rem;
+    color: var(--usuzumi);
   }
   .site-footer__links {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4rem 1.4rem;
+    gap: 0.4rem 1.6rem;
     list-style: none;
     margin: 0;
     padding: 0;
+    letter-spacing: 0.12em;
   }
   .site-footer small {
     margin-left: auto;
-    letter-spacing: 0.1em;
-  }
-  @media (max-width: 34rem) {
-    .site-footer small {
-      margin-left: 0;
-      width: 100%;
-    }
+    font-family: var(--roman);
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
   }
 </style>

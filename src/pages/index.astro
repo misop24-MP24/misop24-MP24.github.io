@@ -1,22 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
-import Enso from '../components/Enso.astro';
+import InkEnso from '../components/InkEnso.astro';
 import Seal from '../components/Seal.astro';
-import WorkCard from '../components/WorkCard.astro';
+import WorkList from '../components/WorkList.astro';
 import { SITE, LINKS } from '../config';
 import { getPublishedWorks } from '../lib/works';
 
 const works = await getPublishedWorks();
-const latest = works.slice(0, 3);
 
 const jsonLd = [
-  {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: SITE.name,
-    url: SITE.url,
-    inLanguage: 'ja',
-  },
+  { '@context': 'https://schema.org', '@type': 'WebSite', name: SITE.name, url: SITE.url, inLanguage: 'ja' },
   {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -26,157 +19,180 @@ const jsonLd = [
     ...(LINKS.length > 0 ? { sameAs: LINKS.map((l) => l.url) } : {}),
   },
 ];
+const letters = [...SITE.name];
 ---
 
-<Base jsonLd={jsonLd}>
+<Base jsonLd={jsonLd} home>
   <section class="hero">
-    <div class="container hero__inner">
-      <div class="hero__enso">
-        <Enso seed={3} animate />
-        <h1 class="hero__name">
-          <span class="hero__name-main">{SITE.name}</span>
-          <span class="hero__name-role">{SITE.role}</span>
-        </h1>
-      </div>
-      <div class="hero__side">
-        <p class="hero__tagline">{SITE.tagline}</p>
-        <Seal />
-      </div>
+    <div class="hero__stage">
+      <InkEnso seed={SITE.ensoSeed} intro class="hero__enso" />
+      <h1 class="hero__name" aria-label={SITE.name}>
+        {letters.map((ch, i) => <span aria-hidden="true" style={`--i:${i}`}>{ch}</span>)}
+      </h1>
+      <Seal class="hero__seal" />
     </div>
-    <p class="hero__lead">{SITE.lead}</p>
+    <a class="hero__cue" href="#works" aria-label="作品へ"><span></span></a>
   </section>
 
-  <section class="latest" aria-labelledby="latest-title">
-    <div class="container">
-      <hr class="brush-rule" />
-      <h2 id="latest-title" class="section-title">作品</h2>
-
-      {
-        latest.length > 0 ? (
-          <>
-            <div class="grid">
-              {latest.map((work) => (
-                <WorkCard work={work} />
-              ))}
-            </div>
-            <p class="more">
-              <a href="/works/">作品をすべて見る</a>
-            </p>
-          </>
-        ) : (
-          <div class="empty">
-            <div class="empty__enso">
-              <Enso seed={11} />
-            </div>
-            <p>作品は、準備中です。</p>
-          </div>
-        )
-      }
-    </div>
+  <section id="works" class="works wrap" aria-labelledby="works-title">
+    <h2 id="works-title" class="works__title">作品</h2>
+    {works.length > 0 ? <WorkList works={works} /> : <p class="works__empty">最初の作品を準備しています。</p>}
   </section>
 </Base>
 
 <style>
   .hero {
-    padding-top: clamp(1rem, 4vw, 3rem);
-    padding-bottom: 2rem;
-  }
-  .hero__inner {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    gap: clamp(1.2rem, 4vw, 3rem);
-  }
-  .hero__enso {
     position: relative;
-    width: min(66vw, 30rem);
+    min-height: 100vh;
+    min-height: 100svh;
+    display: grid;
+    place-items: center;
+    padding: 5rem var(--gutter) 6rem;
+  }
+  .hero__stage {
+    position: relative;
+    width: min(44rem, max(76vmin, min(88vw, 64vh)));
+    will-change: transform, opacity;
   }
   .hero__name {
     position: absolute;
     inset: 0;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    text-align: center;
-    animation: rise 1.8s ease 1.2s both;
+    font-family: var(--roman);
+    font-weight: 300;
+    font-size: clamp(2.4rem, 8.4vmin, 5.4rem);
+    letter-spacing: 0.14em;
+    padding-left: 0.14em;
+    line-height: 1;
   }
-  .hero__name-main {
-    font-size: clamp(1.5rem, 5.2vw, 2.5rem);
-    letter-spacing: 0.22em;
-    padding-left: 0.22em; /* 字間ぶんの中央ずれを直す */
-    font-weight: 500;
+  .hero__name span {
+    display: inline-block;
   }
-  .hero__name-role {
-    font-size: clamp(0.72rem, 2vw, 0.9rem);
-    letter-spacing: 0.5em;
-    padding-left: 0.5em;
-    color: var(--sumi-soft);
-  }
-  .hero__side {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.6rem;
-    padding-top: clamp(1rem, 5vw, 3.4rem);
-    animation: rise 1.8s ease 1.8s both;
-  }
-  .hero__tagline {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    margin: 0;
-    font-size: clamp(1rem, 2.6vw, 1.4rem);
-    letter-spacing: 0.5em;
-    line-height: 1.6;
-  }
-  .hero__lead {
-    text-align: center;
-    margin: clamp(1.5rem, 5vw, 3rem) 0 0;
-    letter-spacing: 0.3em;
-    color: var(--sumi-mid);
-  }
-  @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(0.6rem);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
+  .hero :global(.hero__seal) {
+    position: absolute;
+    right: 3%;
+    bottom: 4%;
   }
 
-  .latest {
-    margin-top: clamp(3rem, 8vw, 6rem);
+  /* 開いたときの順番: 円相 → 名前 → 落款 → まわり */
+  :global(html.js) .hero__name span {
+    opacity: 0;
+    filter: blur(12px);
+    translate: 0 0.18em;
   }
-  .section-title {
-    text-align: center;
-    font-size: 1.1rem;
-    letter-spacing: 0.6em;
-    padding-left: 0.6em;
-    margin: 3.4rem 0 3.6rem;
-    color: var(--sumi-mid);
+  :global(html.js.intro-done) .hero__name span {
+    opacity: 1;
+    filter: blur(0);
+    translate: 0 0;
+    transition:
+      opacity 1.1s var(--ease) calc(var(--i) * 70ms),
+      filter 1.3s var(--ease-out) calc(var(--i) * 70ms),
+      translate 1.3s var(--ease-out) calc(var(--i) * 70ms);
   }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 17rem));
-    justify-content: center;
-    gap: 4.4rem 3rem;
+  :global(html.js) .hero :global(.hero__seal) {
+    opacity: 0;
+    scale: 1.5;
   }
-  .more {
-    text-align: center;
-    margin: 4.4rem 0 0;
-    letter-spacing: 0.3em;
+  :global(html.js.intro-done) .hero :global(.hero__seal) {
+    opacity: 1;
+    scale: 1;
+    transition:
+      opacity 0.18s linear 0.95s,
+      scale 0.45s cubic-bezier(0.3, 1.4, 0.5, 1) 0.95s;
   }
-  .empty {
-    text-align: center;
-    color: var(--sumi-soft);
-    padding-bottom: 2rem;
+  :global(html.intro-quick.intro-done) .hero__name span {
+    transition-delay: calc(var(--i) * 35ms);
   }
-  .empty__enso {
-    width: 7rem;
-    margin: 0 auto 1.4rem;
-    opacity: 0.55;
+  :global(html.intro-quick.intro-done) .hero :global(.hero__seal) {
+    transition-delay: 0.45s;
+  }
+
+  /* 下へ続く合図(細い線を墨が流れる) */
+  .hero__cue {
+    position: absolute;
+    left: 50%;
+    bottom: clamp(1.4rem, 4vh, 2.6rem);
+    width: 1px;
+    height: clamp(2.6rem, 7vh, 4.2rem);
+    translate: -50% 0;
+    background: var(--hair);
+    overflow: hidden;
+  }
+  .hero__cue::before {
+    content: '';
+    position: absolute;
+    inset: -1rem -1.2rem;
+  }
+  .hero__cue span {
+    position: absolute;
+    inset: 0;
+    background: var(--ink);
+    animation: cue 2.4s var(--ease) infinite;
+  }
+  @keyframes cue {
+    0% {
+      transform: translateY(-100%);
+    }
+    55%,
+    100% {
+      transform: translateY(100%);
+    }
+  }
+  :global(html.js) .hero__cue {
+    opacity: 0;
+    transition: opacity 1.2s var(--ease) 1.4s;
+  }
+  :global(html.js.intro-done) .hero__cue {
+    opacity: 1;
+  }
+
+  .works {
+    padding-top: clamp(4rem, 10vw, 8rem);
+    max-width: 82rem;
+    margin-inline: auto;
+    width: 100%;
+  }
+  .works__title {
+    font-size: 0.95rem;
+    letter-spacing: 0.42em;
+    color: var(--usuzumi);
+    margin-bottom: clamp(1.6rem, 4vw, 3rem);
+  }
+  .works__empty {
+    color: var(--usuzumi);
+    letter-spacing: 0.14em;
   }
 </style>
+
+<script>
+  const root = document.documentElement;
+  const finish = () => root.classList.add('intro-done');
+  document.querySelector('.hero')?.addEventListener('enso:done', finish, { once: true });
+  // 何かの理由で描けなかったときも、中身は必ず見えるようにする
+  setTimeout(finish, 5000);
+
+  // スクロールすると、円相が少し遠のく
+  const stage = document.querySelector<HTMLElement>('.hero__stage');
+  if (stage && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const h = window.innerHeight;
+      const p = Math.min(1, Math.max(0, window.scrollY / h));
+      stage.style.transform = `translateY(${p * h * 0.18}px) scale(${1 - p * 0.08}) rotate(${p * -6}deg)`;
+      stage.style.opacity = String(1 - p * 0.85);
+    };
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (!ticking) {
+          ticking = true;
+          requestAnimationFrame(update);
+        }
+      },
+      { passive: true },
+    );
+  }
+</script>

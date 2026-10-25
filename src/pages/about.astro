@@ -1,79 +1,73 @@
 ---
 import Base from '../layouts/Base.astro';
-import Enso from '../components/Enso.astro';
+import InkEnso from '../components/InkEnso.astro';
 import { SITE, LINKS, ABOUT } from '../config';
 ---
 
 <Base title="紹介" description={`${SITE.name}の紹介ページです。${ABOUT[0] ?? ''}`}>
-  <div class="container narrow">
-    <h1 class="page-title">紹介</h1>
-
-    <div class="about">
-      <div class="about__enso"><Enso seed={5} /></div>
-      <h2 class="about__name">{SITE.name}</h2>
+  <section class="about wrap">
+    <div class="about__enso"><InkEnso seed={11} /></div>
+    <div class="about__text">
+      <h1 class="about__name">{SITE.name}</h1>
       <div class="prose">
         {ABOUT.map((line) => <p>{line}</p>)}
       </div>
-
       {
         LINKS.length > 0 && (
-          <>
-            <hr class="brush-rule" />
-            <ul class="links">
-              {LINKS.map((l) => (
-                <li>
-                  <a href={l.url} rel="me noopener" target="_blank">
-                    {l.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </>
+          <ul class="about__links">
+            {LINKS.map((l) => (
+              <li>
+                <a class="ink-link" href={l.url} rel="me noopener" target="_blank">
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
         )
       }
     </div>
-  </div>
+  </section>
 </Base>
 
 <style>
-  .narrow {
-    max-width: 44rem;
-  }
-  .page-title {
-    text-align: center;
-    font-size: 1.1rem;
-    letter-spacing: 0.6em;
-    padding-left: 0.6em;
-    margin: 3rem 0 3.4rem;
-    color: var(--sumi-mid);
-  }
   .about {
-    text-align: center;
+    max-width: 82rem;
+    margin-inline: auto;
+    width: 100%;
+    padding-top: clamp(8rem, 18vw, 13rem);
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    gap: clamp(2.4rem, 7vw, 7rem);
+    align-items: center;
   }
   .about__enso {
-    width: 8rem;
-    margin: 0 auto 1.6rem;
+    width: 100%;
+    max-width: 30rem;
+    rotate: 150deg;
   }
   .about__name {
-    font-size: 1.5rem;
-    letter-spacing: 0.3em;
-    padding-left: 0.3em;
-    margin-bottom: 2.4rem;
+    font-family: var(--roman);
+    font-weight: 300;
+    font-size: clamp(2.6rem, 6vw, 4.6rem);
+    letter-spacing: 0.1em;
+    line-height: 1.1;
+    margin-bottom: clamp(1.6rem, 3vw, 2.6rem);
   }
-  .about .prose {
-    text-align: left;
-  }
-  .about .brush-rule {
-    margin: 3rem 0 2rem;
-  }
-  .links {
+  .about__links {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
     gap: 0.6rem 2rem;
     list-style: none;
     padding: 0;
-    margin: 0;
-    letter-spacing: 0.2em;
+    margin: 2.6rem 0 0;
+    letter-spacing: 0.18em;
+  }
+  @media (max-width: 48rem) {
+    .about {
+      grid-template-columns: 1fr;
+    }
+    .about__enso {
+      max-width: 16rem;
+    }
   }
 </style>

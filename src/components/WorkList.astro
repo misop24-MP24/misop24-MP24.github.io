@@ -1,0 +1,217 @@
+---
+// 作品の一覧。大きな作品名を縦に並べます。
+// マウスを乗せると、カーソルの位置に画面写真が墨のように丸く広がります。
+// スマホでは、各行の右に小さな丸い写真が出ます。
+import type { CollectionEntry } from 'astro:content';
+import { getImage } from 'astro:assets';
+import InkEnso from './InkEnso.astro';
+
+interface Props {
+  works: CollectionEntry<'works'>[];
+}
+const { works } = Astro.props;
+
+const seedOf = (id: string) => [...id].reduce((s, ch) => (s * 31 + ch.charCodeAt(0)) % 9973, 7);
+
+const items = await Promise.all(
+  works.map(async (w) => {
+    const img = w.data.cover ? await getImage({ src: w.data.cover, width: 720, height: 720, fit: 'cover', format: 'webp' }) : null;
+    const thumb = w.data.cover ? await getImage({ src: w.data.cover, width: 160, height: 160, fit: 'cover', format: 'webp' }) : null;
+    return { work: w, img: img?.src, thumb: thumb?.src, seed: seedOf(w.id) };
+  }),
+);
+---
+
+<work-list class="list">
+  <ul>
+    {
+      items.map(({ work, img, thumb, seed }, i) => (
+        <li>
+          <a class="row" href={`/works/${work.id}/`} data-index={i}>
+            <span class="row__title">{work.data.title}</span>
+            <span class="row__thumb" aria-hidden="true">
+              {thumb ? <img src={thumb} alt="" width="80" height="80" loading="lazy" decoding="async" /> : <InkEnso seed={seed} />}
+            </span>
+            <span class="row__year">{work.data.date.getFullYear()}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+
+  <div class="preview" aria-hidden="true">
+    {
+      items.map(({ img, seed }, i) => (
+        <div class="preview__item" data-index={i}>
+          {img ? <img src={img} alt="" loading="lazy" decoding="async" /> : <div class="preview__enso"><InkEnso seed={seed} /></div>}
+        </div>
+      ))
+    }
+  </div>
+</work-list>
+
+<style>
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    gap: 1.4rem;
+    padding-block: clamp(0.9rem, 2.2vw, 1.6rem);
+    transition: opacity 0.6s var(--ease);
+  }
+  .row__title {
+    font-size: clamp(1.75rem, 4.6vw, 3.6rem);
+    line-height: 1.35;
+    letter-spacing: 0.1em;
+    transition: transform 0.8s var(--ease-out);
+  }
+  .row__year {
+    font-family: var(--roman);
+    font-size: clamp(1rem, 1.6vw, 1.25rem);
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--usuzumi);
+    font-variant-numeric: oldstyle-nums;
+  }
+  .row__thumb {
+    display: none;
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 50%;
+    overflow: hidden;
+    align-self: center;
+    background: var(--paper-deep);
+  }
+  .row__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* 他の行を薄くして、指している作品だけを浮かび上がらせる */
+  @media (hover: hover) and (pointer: fine) {
+    ul:hover .row {
+      opacity: 0.22;
+    }
+    ul:hover .row:hover,
+    .row:focus-visible {
+      opacity: 1;
+    }
+    .row:hover .row__title,
+    .row:focus-visible .row__title {
+      transform: translateX(0.6em);
+    }
+  }
+  @media (hover: none), (pointer: coarse) {
+    .row {
+      align-items: center;
+    }
+    .row__thumb {
+      display: block;
+    }
+    .preview {
+      display: none;
+    }
+  }
+
+  /* カーソルについてくる丸い写真 */
+  .preview {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 15;
+    width: clamp(14rem, 24vw, 22rem);
+    aspect-ratio: 1;
+    pointer-events: none;
+    translate: var(--x, -999px) var(--y, -999px);
+  }
+  .preview__item {
+    position: absolute;
+    inset: 0;
+    margin: -50% 0 0 -50%;
+    overflow: hidden;
+    /* 縁が紙に滲んだような、少しいびつな円 */
+    -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='f' x='-25%' y='-25%' width='150%' height='150%'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='2' seed='5' result='a'/><feDisplacementMap in='SourceGraphic' in2='a' scale='5' result='b'/><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='8' result='c'/><feDisplacementMap in='b' in2='c' scale='1.6'/></filter><circle cx='100' cy='100' r='90' filter='url(%23f)'/></svg>") center / 100% 100% no-repeat;
+    mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='f' x='-25%' y='-25%' width='150%' height='150%'><feTurbulence type='fractalNoise' baseFrequency='0.035' numOctaves='2' seed='5' result='a'/><feDisplacementMap in='SourceGraphic' in2='a' scale='5' result='b'/><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='8' result='c'/><feDisplacementMap in='b' in2='c' scale='1.6'/></filter><circle cx='100' cy='100' r='90' filter='url(%23f)'/></svg>") center / 100% 100% no-repeat;
+    clip-path: circle(0% at 50% 50%);
+    transition: clip-path 0.7s var(--ease-out);
+  }
+  .preview__item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    scale: 1.25;
+    transition: scale 1.2s var(--ease-out);
+  }
+  .preview__item.is-on {
+    clip-path: circle(50% at 50% 50%);
+  }
+  .preview__item.is-on img {
+    scale: 1;
+  }
+  .preview__enso {
+    width: 100%;
+    height: 100%;
+    padding: 12%;
+    background: var(--paper-deep);
+  }
+</style>
+
+<script>
+  class WorkList extends HTMLElement {
+    connectedCallback() {
+      const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      if (!fine) return;
+      const preview = this.querySelector<HTMLElement>('.preview')!;
+      const items = [...this.querySelectorAll<HTMLElement>('.preview__item')];
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let tx = 0;
+      let ty = 0;
+      let x = 0;
+      let y = 0;
+      let running = false;
+      let placed = false;
+
+      const loop = () => {
+        // 少し遅れてついてくる(墨が紙に追いつくような間)
+        const k = reduce ? 1 : 0.14;
+        x += (tx - x) * k;
+        y += (ty - y) * k;
+        preview.style.setProperty('--x', `${x}px`);
+        preview.style.setProperty('--y', `${y}px`);
+        if (Math.abs(tx - x) > 0.2 || Math.abs(ty - y) > 0.2) requestAnimationFrame(loop);
+        else running = false;
+      };
+
+      this.addEventListener('pointermove', (e) => {
+        tx = e.clientX;
+        ty = e.clientY;
+        if (!placed) {
+          x = tx;
+          y = ty;
+          placed = true;
+        }
+        if (!running) {
+          running = true;
+          requestAnimationFrame(loop);
+        }
+      });
+
+      const show = (i: number | null) => items.forEach((el, n) => el.classList.toggle('is-on', n === i));
+      this.querySelectorAll<HTMLElement>('.row').forEach((row) => {
+        row.addEventListener('pointerenter', () => show(Number(row.dataset.index)));
+        row.addEventListener('pointerleave', () => show(null));
+      });
+      this.addEventListener('pointerleave', () => {
+        show(null);
+        placed = false;
+      });
+    }
+  }
+  if (!customElements.get('work-list')) customElements.define('work-list', WorkList);
+</script>

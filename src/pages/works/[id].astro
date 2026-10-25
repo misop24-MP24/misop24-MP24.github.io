@@ -8,14 +8,17 @@ import { getPublishedWorks } from '../../lib/works';
 
 export const getStaticPaths = (async () => {
   const works = await getPublishedWorks();
-  return works.map((work) => ({ params: { id: work.id }, props: { work } }));
+  return works.map((work, i) => ({
+    params: { id: work.id },
+    // 一覧の次の作品(最後の作品なら、最初に戻る)
+    props: { work, next: works.length > 1 ? works[(i + 1) % works.length] : null },
+  }));
 }) satisfies GetStaticPaths;
 
-const { work } = Astro.props;
+const { work, next } = Astro.props;
 const { title, summary, date, cover, coverAlt, tags, links, embed } = work.data;
 const { Content } = await render(work);
 
-// 共有したときの画像(表紙があれば、1200x630 に整えたもの)
 let ogImage: string | undefined;
 if (cover) {
   const og = await getImage({ src: cover, width: 1200, height: 630, fit: 'cover', format: 'jpg' });
@@ -23,7 +26,7 @@ if (cover) {
 }
 
 const pageUrl = new URL(Astro.url.pathname, Astro.site).href;
-const dateText = new Intl.DateTimeFormat('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(date);
+const iso = date.toISOString().slice(0, 10);
 
 const jsonLd = [
   {
@@ -32,7 +35,7 @@ const jsonLd = [
     name: title,
     description: summary,
     url: pageUrl,
-    datePublished: date.toISOString().slice(0, 10),
+    datePublished: iso,
     inLanguage: 'ja',
     author: { '@type': 'Person', name: SITE.name, url: SITE.url },
     ...(ogImage ? { image: ogImage } : {}),
@@ -51,38 +54,39 @@ const jsonLd = [
 ---
 
 <Base title={title} description={summary} image={ogImage} type="article" jsonLd={jsonLd}>
-  <article class="work-page">
-    <header class="container work-head">
-      <p class="crumb"><a href="/works/">作品</a></p>
-      <h1>{title}</h1>
-      <p class="work-head__summary">{summary}</p>
-      <p class="work-head__meta">
-        <time datetime={date.toISOString().slice(0, 10)}>{dateText}</time>
-        {tags.map((t) => <span>{t}</span>)}
-      </p>
+  <article class="work">
+    <header class="work__head wrap">
+      <h1 class="work__title">{title}</h1>
+      <p class="work__summary">{summary}</p>
+      <ul class="work__meta">
+        <li><time datetime={iso}>{date.getFullYear()}</time></li>
+        {tags.map((t) => <li>{t}</li>)}
+      </ul>
     </header>
 
     {
       cover && (
-        <figure class="container cover">
-          <Image
-            src={cover}
-            alt={coverAlt ?? `${title}の画面`}
-            widths={[480, 800, 1200]}
-            sizes="(min-width: 68rem) 56rem, 100vw"
-            loading="eager"
-            class="cover__img"
-          />
+        <figure class="work__cover wrap">
+          <div class="work__cover-inner">
+            <Image
+              src={cover}
+              alt={coverAlt ?? `${title}の画面`}
+              widths={[640, 1000, 1600]}
+              sizes="(min-width: 82rem) 74rem, 92vw"
+              loading="eager"
+              fetchpriority="high"
+            />
+          </div>
         </figure>
       )
     }
 
     {
       links.length > 0 && (
-        <ul class="container actions">
+        <ul class="work__actions wrap">
           {links.map((l, i) => (
             <li>
-              <a class={`button${i === 0 ? ' button--primary' : ''}`} href={l.url} target="_blank" rel="noopener">
+              <a class:list={['btn', { 'btn--solid': i === 0 }]} href={l.url} target="_blank" rel="noopener">
                 {l.label}
               </a>
             </li>
@@ -93,11 +97,11 @@ const jsonLd = [
 
     {
       embed && (
-        <div class="container">
-          <div class="embed">
+        <div class="work__embed wrap">
+          <div class="work__embed-inner">
             <iframe
               src={embed}
-              title={`${title}(ブラウザで遊ぶ)`}
+              title={`${title}を遊ぶ`}
               loading="lazy"
               allow="fullscreen; autoplay; gamepad"
               referrerpolicy="strict-origin-when-cross-origin"
@@ -107,107 +111,142 @@ const jsonLd = [
       )
     }
 
-    <div class="container body">
+    <div class="work__body wrap">
       <div class="prose">
         <Content />
       </div>
     </div>
-
-    <p class="container back"><a href="/works/">作品の一覧へ戻る</a></p>
   </article>
+
+  {
+    next && (
+      <nav class="next wrap" aria-label="次の作品">
+        <a class="next__link" href={`/works/${next.id}/`}>
+          <span class="next__label">次の作品</span>
+          <span class="next__title">{next.data.title}</span>
+        </a>
+      </nav>
+    )
+  }
 </Base>
 
 <style>
-  .work-head {
-    text-align: center;
-    padding-top: 2.4rem;
-    max-width: 46rem;
+  .work__head {
+    max-width: 82rem;
+    margin-inline: auto;
+    padding-top: clamp(8rem, 18vw, 13rem);
+    padding-bottom: clamp(2.4rem, 5vw, 4rem);
   }
-  .crumb {
-    margin: 0 0 2.6rem;
-    font-size: 0.85rem;
-    letter-spacing: 0.4em;
-    color: var(--sumi-soft);
+  .work__title {
+    font-size: clamp(2.2rem, 7vw, 5.6rem);
+    line-height: 1.25;
+    letter-spacing: 0.12em;
   }
-  h1 {
-    font-size: clamp(1.6rem, 5vw, 2.3rem);
-    letter-spacing: 0.16em;
-    margin-bottom: 1.4rem;
+  .work__summary {
+    margin-top: clamp(1.2rem, 3vw, 2rem);
+    max-width: 34rem;
+    color: var(--ink-mid);
   }
-  .work-head__summary {
-    color: var(--sumi-mid);
-    margin-bottom: 1rem;
-  }
-  .work-head__meta {
+  .work__meta {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 0 1.4rem;
-    font-size: 0.82rem;
-    letter-spacing: 0.14em;
-    color: var(--sumi-soft);
-    margin-bottom: 2.6rem;
+    align-items: baseline;
+    gap: 0.2rem 1.6rem;
+    list-style: none;
+    margin: 1.2rem 0 0;
+    padding: 0;
+    font-size: 0.85rem;
+    letter-spacing: 0.16em;
+    color: var(--usuzumi);
+  }
+  .work__meta time {
+    font-family: var(--roman);
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
   }
 
-  .cover {
-    max-width: 56rem;
-    margin: 0 auto 3rem;
+  .work__cover {
+    margin: 0 auto;
+    max-width: 82rem;
   }
-  .cover :global(.cover__img) {
-    display: block;
+  .work__cover-inner :global(img) {
     width: 100%;
     height: auto;
-    outline: 1px solid var(--line);
-    outline-offset: 0.6rem;
+  }
+  /* 中心から、墨が広がるように現れる */
+  :global(html.js) .work__cover-inner {
+    clip-path: circle(0% at 50% 50%);
+    animation: spread 1.6s var(--ease-out) 0.25s forwards;
+  }
+  @keyframes spread {
+    to {
+      clip-path: circle(75% at 50% 50%);
+    }
   }
 
-  .actions {
+  .work__actions {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 1rem 1.4rem;
+    gap: 0.9rem 1.2rem;
     list-style: none;
-    padding: 0;
-    margin: 0 auto 3.4rem;
+    margin: clamp(2.4rem, 5vw, 3.6rem) auto 0;
+    max-width: 82rem;
   }
-  .button {
-    display: inline-block;
-    padding: 0.7rem 2rem;
-    border: 1px solid var(--sumi);
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 3.2rem;
+    padding: 0.5rem 2.1rem;
+    border: 1px solid var(--ink);
     border-radius: 999px;
-    text-decoration: none;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.18em;
     font-size: 0.95rem;
-    line-height: 1.6;
-    transition:
-      background 0.4s,
-      color 0.4s;
+    line-height: 1.5;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    transition: color 0.5s var(--ease);
   }
-  .button:hover,
-  .button:focus-visible {
-    background: var(--sumi);
-    color: var(--washi);
+  /* 押せる所の内側に、墨が満ちる */
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--ink);
+    clip-path: circle(0% at 50% 100%);
+    transition: clip-path 0.6s var(--ease);
   }
-  .button--primary {
-    background: var(--sumi);
-    color: var(--washi);
+  .btn:hover,
+  .btn:focus-visible {
+    color: var(--paper);
   }
-  .button--primary:hover,
-  .button--primary:focus-visible {
-    background: transparent;
-    color: var(--sumi);
+  .btn:hover::before,
+  .btn:focus-visible::before {
+    clip-path: circle(140% at 50% 100%);
+  }
+  .btn--solid {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn--solid::before {
+    background: var(--paper);
+  }
+  .btn--solid:hover,
+  .btn--solid:focus-visible {
+    color: var(--ink);
   }
 
-  .embed {
-    position: relative;
-    max-width: 56rem;
-    margin: 0 auto 3.4rem;
-    aspect-ratio: 16 / 9;
-    background: var(--washi-2);
-    outline: 1px solid var(--line);
-    outline-offset: 0.6rem;
+  .work__embed {
+    max-width: 82rem;
+    margin: clamp(3rem, 6vw, 4.4rem) auto 0;
   }
-  .embed iframe {
+  .work__embed-inner {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--paper-deep);
+  }
+  .work__embed-inner iframe {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -215,12 +254,45 @@ const jsonLd = [
     border: 0;
   }
 
-  .body {
-    margin-top: 1rem;
+  .work__body {
+    max-width: 82rem;
+    margin: clamp(4rem, 9vw, 7rem) auto 0;
   }
-  .back {
-    text-align: center;
-    margin-top: 4.4rem;
-    letter-spacing: 0.3em;
+  .work__body .prose {
+    margin-left: clamp(0rem, 16vw, 16rem);
+  }
+  @media (max-width: 48rem) {
+    .work__body .prose {
+      margin-left: 0;
+    }
+  }
+
+  .next {
+    max-width: 82rem;
+    margin: clamp(6rem, 14vw, 11rem) auto 0;
+    width: 100%;
+  }
+  .next__link {
+    display: block;
+    padding-top: clamp(2rem, 4vw, 3rem);
+    border-top: 1px solid var(--hair);
+  }
+  .next__label {
+    display: block;
+    font-size: 0.85rem;
+    letter-spacing: 0.32em;
+    color: var(--usuzumi);
+  }
+  .next__title {
+    display: inline-block;
+    margin-top: 0.8rem;
+    font-size: clamp(1.9rem, 5.4vw, 4.2rem);
+    line-height: 1.3;
+    letter-spacing: 0.1em;
+    transition: transform 0.9s var(--ease-out);
+  }
+  .next__link:hover .next__title,
+  .next__link:focus-visible .next__title {
+    transform: translateX(0.5em);
   }
 </style>

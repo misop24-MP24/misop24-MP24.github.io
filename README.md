@@ -18,13 +18,13 @@ Astro で作っていて、GitHub Pages で公開します。
 
 ## 設定を変える
 
-`src/config.ts` に、活動名、説明文、縦書きの一文、落款の文字、リンク(X、itch.io、Steam)、紹介ページの文章があります。
+`src/config.ts` に、活動名、説明文、落款の文字、トップの円相の形(`ensoSeed`)、リンク(X、itch.io、Steam)、紹介ページの文章があります。
 
 ## デザインを変える
 
-- 色: `src/styles/global.css` の先頭にある `--washi`(紙)、`--sumi`(墨)、`--shu`(朱)
-- 作品の円形サムネイルの色の抜け具合: `src/components/WorkCard.astro` の `grayscale(0.5)`(`0` で色を抜かない)
-- 円相の形: `src/lib/enso.ts`
+- 色: `src/styles/global.css` の先頭にある `--paper`(白砂)、`--ink`(青墨)、`--shu`(朱)。`--ink-rgb` も `--ink` と同じ色にします
+- 毛筆の円相(かすれ・にじみ): `src/lib/brush.ts`
+- 開いたときの演出: `src/components/InkEnso.astro` と `src/pages/index.astro`
 
 ## 手元で確認する(任意)
 

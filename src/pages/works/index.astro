@@ -1,7 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import Enso from '../../components/Enso.astro';
-import WorkCard from '../../components/WorkCard.astro';
+import WorkList from '../../components/WorkList.astro';
 import { SITE } from '../../config';
 import { getPublishedWorks } from '../../lib/works';
 
@@ -9,50 +8,27 @@ const works = await getPublishedWorks();
 ---
 
 <Base title="作品" description={`${SITE.name}が作ったゲームの一覧です。ブラウザで遊べるものや、販売中のものがあります。`}>
-  <div class="container">
-    <h1 class="page-title">作品</h1>
-
-    {
-      works.length > 0 ? (
-        <div class="grid">
-          {works.map((work) => (
-            <WorkCard work={work} />
-          ))}
-        </div>
-      ) : (
-        <div class="empty">
-          <div class="empty__enso">
-            <Enso seed={11} />
-          </div>
-          <p>作品は、準備中です。</p>
-        </div>
-      )
-    }
-  </div>
+  <section class="page wrap">
+    <h1 class="page__title">作品</h1>
+    {works.length > 0 ? <WorkList works={works} /> : <p class="page__empty">最初の作品を準備しています。</p>}
+  </section>
 </Base>
 
 <style>
-  .page-title {
-    text-align: center;
-    font-size: 1.1rem;
-    letter-spacing: 0.6em;
-    padding-left: 0.6em;
-    margin: 3rem 0 4.4rem;
-    color: var(--sumi-mid);
+  .page {
+    max-width: 82rem;
+    margin-inline: auto;
+    width: 100%;
+    padding-top: clamp(8rem, 18vw, 13rem);
   }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 17rem));
-    justify-content: center;
-    gap: 4.4rem 3rem;
+  .page__title {
+    font-size: 0.95rem;
+    letter-spacing: 0.42em;
+    color: var(--usuzumi);
+    margin-bottom: clamp(1.6rem, 4vw, 3rem);
   }
-  .empty {
-    text-align: center;
-    color: var(--sumi-soft);
-  }
-  .empty__enso {
-    width: 7rem;
-    margin: 0 auto 1.4rem;
-    opacity: 0.55;
+  .page__empty {
+    color: var(--usuzumi);
+    letter-spacing: 0.14em;
   }
 </style>
