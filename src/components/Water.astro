@@ -355,7 +355,7 @@ const letters = [...name];
       let second = false;
       let done = false;
       let stepsSinceDrop = 0;
-      let nextAmbient = 6000;
+      let nextAmbient = 16000; // 最初の自然な雫は、開いて16秒後
 
       // 画面に見えていないときは止める
       new IntersectionObserver(([e]) => (this.visible = e.isIntersecting)).observe(this);
@@ -366,17 +366,22 @@ const letters = [...name];
         const x = e.clientX - r.left;
         const y = e.clientY - r.top;
         const now = performance.now();
-        if (this.last.x >= 0) {
-          const dist = Math.hypot(x - this.last.x, y - this.last.y);
-          const speed = dist / Math.max(8, now - this.last.t);
-          if (dist > 2) this.drop(x, y, e.pointerType === 'mouse' ? 3.2 : 4, Math.min(0.32, 0.06 + speed * 0.16));
+        if (this.last.x < 0) {
+          this.last = { x, y, t: now };
+          return;
         }
+        // マウスの軌跡に立つ波紋は、大きく動いたときだけ、ごく弱く(数値を大きくすると、さらに減ります)
+        const dist = Math.hypot(x - this.last.x, y - this.last.y);
+        const dt = now - this.last.t;
+        if (dist < 90 || dt < 260) return;
+        const speed = dist / dt;
+        this.drop(x, y, e.pointerType === 'mouse' ? 2.8 : 3.4, Math.min(0.1, 0.03 + speed * 0.03));
         this.last = { x, y, t: now };
       });
       this.addEventListener('pointerleave', () => (this.last.x = -1));
       this.addEventListener('pointerdown', (e) => {
         const r = this.getBoundingClientRect();
-        this.drop(e.clientX - r.left, e.clientY - r.top, 5, 1.6);
+        this.drop(e.clientX - r.left, e.clientY - r.top, 4.5, 1.1);
       });
 
       let raf = 0;
@@ -411,7 +416,7 @@ const letters = [...name];
         }
         if (t > nextAmbient) {
           // ときおり、どこかに小さな雫
-          nextAmbient = t + 4500 + Math.random() * 5000;
+          nextAmbient = t + 18000 + Math.random() * 12000; // 18〜30秒に1回
           // 名前の上には落とさない
           let ax = 0;
           let ay = 0;
@@ -419,7 +424,7 @@ const letters = [...name];
             ax = 0.1 + Math.random() * 0.8;
             ay = 0.12 + Math.random() * 0.76;
           } while (Math.abs(ax - 0.5) < 0.24 && Math.abs(ay - 0.5) < 0.14);
-          this.drop(this.css.w * ax, this.css.h * ay, 3, 0.5);
+          this.drop(this.css.w * ax, this.css.h * ay, 3, 0.32);
         }
         for (let k = 0; k < 2; k++) {
           this.step();

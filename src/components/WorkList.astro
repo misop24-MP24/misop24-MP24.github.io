@@ -1,5 +1,6 @@
 ---
-// 作品の一覧。大きな作品名を縦に並べます。
+// 作品の一覧。年ごとに区切って、大きな作品名を縦に並べます。
+// 作品名の下に一言コメント、右にタグが出ます。
 // マウスを乗せると、カーソルの位置に画面写真が丸く広がり、そのまわりに波紋が立ちます。
 // スマホでは、各行の右に小さな丸い写真が出ます。
 import type { CollectionEntry } from 'astro:content';
@@ -17,33 +18,59 @@ const items = await Promise.all(
   works.map(async (w) => {
     const img = w.data.cover ? await getImage({ src: w.data.cover, width: 720, height: 720, fit: 'cover', format: 'webp' }) : null;
     const thumb = w.data.cover ? await getImage({ src: w.data.cover, width: 160, height: 160, fit: 'cover', format: 'webp' }) : null;
-    return { work: w, img: img?.src, thumb: thumb?.src, seed: seedOf(w.id) };
+    // ネット上の画像URLのときは、そのまま使う
+    return { work: w, img: img?.src ?? w.data.coverUrl, thumb: thumb?.src ?? w.data.coverUrl, seed: seedOf(w.id) };
   }),
 );
+
+// 年ごとにまとめる(新しい年が上)
+const groups: { year: number; items: ((typeof items)[number] & { index: number })[] }[] = [];
+items.forEach((item, index) => {
+  const year = item.work.data.date.getFullYear();
+  let g = groups.find((x) => x.year === year);
+  if (!g) {
+    g = { year, items: [] };
+    groups.push(g);
+  }
+  g.items.push({ ...item, index });
+});
+groups.sort((x, y) => y.year - x.year);
 ---
 
 <work-list class="list">
-  <ul>
-    {
-      items.map(({ work, thumb, seed }, i) => (
-        <li>
-          <a class="row" href={`/works/${work.id}/`} data-index={i}>
-            <span class="row__title">{work.data.title}</span>
-            <span class="row__thumb" aria-hidden="true">
-              {thumb ? (
-                <img src={thumb} alt="" width="80" height="80" loading="lazy" decoding="async" />
-              ) : (
-                <span class="row__rings">
-                  <Ripples seed={seed} />
+  {
+    groups.map((g) => (
+      <section class="year" aria-label={`${g.year}年の作品`}>
+        <h3 class="year__label">{g.year}</h3>
+        <ul class="year__rows">
+          {g.items.map(({ work, thumb, seed, index }) => (
+            <li>
+              <a class="row" href={`/works/${work.id}/`} data-index={index}>
+                <span class="row__title">{work.data.title}</span>
+                {work.data.comment && <span class="row__comment">{work.data.comment}</span>}
+                {work.data.tags.length > 0 && (
+                  <span class="row__tags">
+                    {work.data.tags.map((t) => (
+                      <span class="tag">{t}</span>
+                    ))}
+                  </span>
+                )}
+                <span class="row__thumb" aria-hidden="true">
+                  {thumb ? (
+                    <img src={thumb} alt="" width="80" height="80" loading="lazy" decoding="async" />
+                  ) : (
+                    <span class="row__rings">
+                      <Ripples seed={seed} />
+                    </span>
+                  )}
                 </span>
-              )}
-            </span>
-            <span class="row__year">{work.data.date.getFullYear()}</span>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
 
   <div class="preview" aria-hidden="true">
     <span class="preview__ring"></span>
@@ -71,29 +98,79 @@ const items = await Promise.all(
     margin: 0;
     padding: 0;
   }
+
+  /* 年の区切り: 左に年、右にその年の作品 */
+  .year {
+    display: grid;
+    grid-template-columns: clamp(5rem, 11vw, 9rem) minmax(0, 1fr);
+    gap: 0 clamp(1rem, 3vw, 2.4rem);
+    padding-block: clamp(1.6rem, 3.6vw, 2.8rem);
+    border-top: 1px solid var(--hair);
+  }
+  .year:last-child {
+    border-bottom: 1px solid var(--hair);
+  }
+  .year__label {
+    font-family: var(--roman);
+    font-weight: 300;
+    font-size: clamp(1.15rem, 1.8vw, 1.5rem);
+    letter-spacing: 0.08em;
+    color: var(--mist);
+    font-variant-numeric: oldstyle-nums;
+    padding-top: clamp(1.15rem, 2.6vw, 2.1rem);
+    align-self: start;
+    position: sticky;
+    top: 1.5rem;
+  }
+
   .row {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'title tags'
+      'comment tags';
     align-items: baseline;
-    gap: 1.4rem;
-    padding-block: clamp(0.9rem, 2.2vw, 1.6rem);
+    column-gap: 1.6rem;
+    padding-block: clamp(0.9rem, 2vw, 1.5rem);
     transition: opacity 0.6s var(--ease);
   }
   .row__title {
-    font-size: clamp(1.75rem, 4.6vw, 3.6rem);
+    grid-area: title;
+    font-size: clamp(1.7rem, 4.2vw, 3.3rem);
     line-height: 1.35;
     letter-spacing: 0.1em;
     transition: transform 0.8s var(--ease-out);
   }
-  .row__year {
-    font-family: var(--roman);
-    font-size: clamp(1rem, 1.6vw, 1.25rem);
-    font-weight: 300;
+  .row__comment {
+    grid-area: comment;
+    margin-top: 0.35rem;
+    font-size: 0.92rem;
+    line-height: 1.8;
     letter-spacing: 0.08em;
+    color: var(--ink-mid);
+    transition: transform 0.8s var(--ease-out) 0.04s;
+  }
+  .row__tags {
+    grid-area: tags;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    max-width: 16rem;
+    align-self: center;
+  }
+  .tag {
+    font-size: 0.74rem;
+    line-height: 1;
+    letter-spacing: 0.12em;
     color: var(--mist);
-    font-variant-numeric: oldstyle-nums;
+    padding: 0.42em 0.85em 0.42em 0.97em;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    white-space: nowrap;
   }
   .row__thumb {
+    grid-area: thumb;
     display: none;
     width: 3.4rem;
     height: 3.4rem;
@@ -114,29 +191,47 @@ const items = await Promise.all(
     color: var(--ink-mid);
   }
 
-  /* 他の行を薄くして、指している作品だけを浮かび上がらせる */
+  /* 他の作品を薄くして、指している作品だけを浮かび上がらせる */
   @media (hover: hover) and (pointer: fine) {
-    ul:hover .row {
+    .list:has(.row:hover) .row:not(:hover) {
       opacity: 0.22;
     }
-    ul:hover .row:hover,
-    .row:focus-visible {
-      opacity: 1;
-    }
     .row:hover .row__title,
-    .row:focus-visible .row__title {
-      transform: translateX(0.6em);
+    .row:focus-visible .row__title,
+    .row:hover .row__comment,
+    .row:focus-visible .row__comment {
+      transform: translateX(0.6rem);
     }
   }
   @media (hover: none), (pointer: coarse) {
     .row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'title thumb'
+        'comment thumb'
+        'tags thumb';
       align-items: center;
+    }
+    .row__tags {
+      justify-content: flex-start;
+      max-width: none;
+      margin-top: 0.6rem;
     }
     .row__thumb {
       display: block;
     }
     .preview {
       display: none;
+    }
+  }
+  @media (max-width: 40rem) {
+    .year {
+      grid-template-columns: 1fr;
+    }
+    .year__label {
+      position: static;
+      padding-top: 0;
+      margin-bottom: 0.2rem;
     }
   }
 

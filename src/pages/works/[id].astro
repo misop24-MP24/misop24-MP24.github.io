@@ -16,13 +16,15 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { work, next } = Astro.props;
-const { title, summary, date, cover, coverAlt, tags, links, embed } = work.data;
+const { title, summary, comment, date, cover, coverUrl, coverAlt, tags, links, embed } = work.data;
 const { Content } = await render(work);
 
 let ogImage: string | undefined;
 if (cover) {
   const og = await getImage({ src: cover, width: 1200, height: 630, fit: 'cover', format: 'jpg' });
   ogImage = new URL(og.src, Astro.site).href;
+} else if (coverUrl) {
+  ogImage = coverUrl;
 }
 
 const pageUrl = new URL(Astro.url.pathname, Astro.site).href;
@@ -58,6 +60,7 @@ const jsonLd = [
     <header class="work__head wrap">
       <h1 class="work__title">{title}</h1>
       <p class="work__summary">{summary}</p>
+      {comment && <p class="work__comment">{comment}</p>}
       <ul class="work__meta">
         <li><time datetime={iso}>{date.getFullYear()}</time></li>
         {tags.map((t) => <li>{t}</li>)}
@@ -65,17 +68,21 @@ const jsonLd = [
     </header>
 
     {
-      cover && (
+      (cover || coverUrl) && (
         <figure class="work__cover wrap">
           <div class="work__cover-inner">
-            <Image
-              src={cover}
-              alt={coverAlt ?? `${title}の画面`}
-              widths={[640, 1000, 1600]}
-              sizes="(min-width: 82rem) 74rem, 92vw"
-              loading="eager"
-              fetchpriority="high"
-            />
+            {cover ? (
+              <Image
+                src={cover}
+                alt={coverAlt ?? `${title}の画面`}
+                widths={[640, 1000, 1600]}
+                sizes="(min-width: 82rem) 74rem, 92vw"
+                loading="eager"
+                fetchpriority="high"
+              />
+            ) : (
+              <img src={coverUrl} alt={coverAlt ?? `${title}の画面`} loading="eager" fetchpriority="high" decoding="async" />
+            )}
           </div>
         </figure>
       )
@@ -101,9 +108,10 @@ const jsonLd = [
           <div class="work__embed-inner">
             <iframe
               src={embed}
-              title={`${title}を遊ぶ`}
+              title={title}
               loading="lazy"
-              allow="fullscreen; autoplay; gamepad"
+              allow="fullscreen; autoplay; gamepad; encrypted-media; picture-in-picture; accelerometer; gyroscope; clipboard-write; web-share"
+              allowfullscreen
               referrerpolicy="strict-origin-when-cross-origin"
             />
           </div>
@@ -145,6 +153,14 @@ const jsonLd = [
   .work__summary {
     margin-top: clamp(1.2rem, 3vw, 2rem);
     max-width: 34rem;
+    color: var(--ink-mid);
+  }
+  .work__comment {
+    margin-top: 1rem;
+    max-width: 34rem;
+    padding-left: 1.1rem;
+    border-left: 1px solid var(--hair);
+    font-size: 0.95rem;
     color: var(--ink-mid);
   }
   .work__meta {
