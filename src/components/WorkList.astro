@@ -1,7 +1,7 @@
 ---
 // 作品の一覧。年ごとに区切って、大きな作品名を縦に並べます。
 // 作品名の下に一言コメント、右にタグが出ます。
-// マウスを乗せると、カーソルの位置に画面写真が丸く広がり、そのまわりに波紋が立ちます。
+// マウスを乗せると、その行の空いたところに小さな丸い写真が広がり、まわりに波紋が立ちます。
 // スマホでは、各行の右に小さな丸い写真が出ます。
 import type { CollectionEntry } from 'astro:content';
 import { getImage } from 'astro:assets';
@@ -136,6 +136,7 @@ groups.sort((x, y) => y.year - x.year);
   }
   .row__title {
     grid-area: title;
+    justify-self: start;
     font-size: clamp(1.7rem, 4.2vw, 3.3rem);
     line-height: 1.35;
     letter-spacing: 0.1em;
@@ -143,6 +144,7 @@ groups.sort((x, y) => y.year - x.year);
   }
   .row__comment {
     grid-area: comment;
+    justify-self: start;
     margin-top: 0.35rem;
     font-size: 0.92rem;
     line-height: 1.8;
@@ -235,21 +237,24 @@ groups.sort((x, y) => y.year - x.year);
     }
   }
 
-  /* カーソルについてくる丸い写真 */
+  /* 指している作品の行の、空いているところに出る小さな丸い写真(横はカーソルに合わせて動く) */
   .preview {
     position: fixed;
     left: 0;
     top: 0;
     z-index: 15;
-    width: clamp(14rem, 24vw, 22rem);
+    width: clamp(5.5rem, 8vw, 7.5rem);
     aspect-ratio: 1;
     pointer-events: none;
     translate: var(--x, -999px) var(--y, -999px);
   }
   .preview__item {
     position: absolute;
-    inset: 0;
-    margin: -50% 0 0 -50%;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    translate: -50% -50%;
     border-radius: 50%;
     overflow: hidden;
     clip-path: circle(0% at 50% 50%);
@@ -279,8 +284,11 @@ groups.sort((x, y) => y.year - x.year);
   /* 写真が現れるとき、まわりに広がって消える波紋 */
   .preview__ring {
     position: absolute;
-    inset: 0;
-    margin: -50% 0 0 -50%;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    translate: -50% -50%;
     border-radius: 50%;
     border: 1px solid var(--ink);
     opacity: 0;
@@ -303,7 +311,7 @@ groups.sort((x, y) => y.year - x.year);
       opacity: 0.45;
     }
     100% {
-      scale: 1.55;
+      scale: 1.9;
       opacity: 0;
     }
   }
@@ -323,10 +331,12 @@ groups.sort((x, y) => y.year - x.year);
       let y = 0;
       let running = false;
       let placed = false;
+      let current: HTMLElement | null = null;
+      let pointerX = 0;
 
       const loop = () => {
         // 少し遅れてついてくる(水に浮かんでいるような間)
-        const k = reduce ? 1 : 0.12;
+        const k = reduce ? 1 : 0.14;
         x += (tx - x) * k;
         y += (ty - y) * k;
         preview.style.setProperty('--x', `${x}px`);
@@ -335,9 +345,21 @@ groups.sort((x, y) => y.year - x.year);
         else running = false;
       };
 
-      this.addEventListener('pointermove', (e) => {
-        tx = e.clientX;
-        ty = e.clientY;
+      // 写真の置き場所: 行の高さの真ん中で、作品名・コメントとタグのあいだの空いたところ。
+      // 横はカーソルに合わせて動くが、文字やタグには重ならない
+      const target = () => {
+        if (!current) return;
+        const w = preview.getBoundingClientRect().width;
+        const gap = 24;
+        const row = current.getBoundingClientRect();
+        const title = current.querySelector('.row__title')?.getBoundingClientRect();
+        const comment = current.querySelector('.row__comment')?.getBoundingClientRect();
+        const tags = current.querySelector('.row__tags')?.getBoundingClientRect();
+        const textRight = Math.max(title?.right ?? row.left, comment?.right ?? row.left);
+        const minX = textRight + gap + w / 2;
+        const maxX = (tags ? tags.left : row.right) - gap - w / 2;
+        tx = minX <= maxX ? Math.min(maxX, Math.max(minX, pointerX)) : (textRight + (tags ? tags.left : row.right)) / 2;
+        ty = row.top + row.height / 2;
         if (!placed) {
           x = tx;
           y = ty;
@@ -347,7 +369,13 @@ groups.sort((x, y) => y.year - x.year);
           running = true;
           requestAnimationFrame(loop);
         }
+      };
+
+      this.addEventListener('pointermove', (e) => {
+        pointerX = e.clientX;
+        target();
       });
+      window.addEventListener('scroll', target, { passive: true });
 
       const show = (i: number | null) => {
         items.forEach((el, n) => el.classList.toggle('is-on', n === i));
@@ -359,8 +387,16 @@ groups.sort((x, y) => y.year - x.year);
         }
       };
       this.querySelectorAll<HTMLElement>('.row').forEach((row) => {
-        row.addEventListener('pointerenter', () => show(Number(row.dataset.index)));
-        row.addEventListener('pointerleave', () => show(null));
+        row.addEventListener('pointerenter', (e) => {
+          current = row;
+          pointerX = e.clientX;
+          target();
+          show(Number(row.dataset.index));
+        });
+        row.addEventListener('pointerleave', () => {
+          current = null;
+          show(null);
+        });
       });
       this.addEventListener('pointerleave', () => {
         show(null);

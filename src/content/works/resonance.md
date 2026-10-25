@@ -2,7 +2,6 @@
 title: Resonance
 summary: 音と距離をめぐる、静かなパズル。波をためて、眠っている惑星へ放つと、音が届いた星が目を覚まします。
 date: 2026-10-25
-comment:  チルで気持ちいい手触り感を作りたくて作ったもの。ゲーム性や手触りの向上などまだやり残したことはあるが、AIゲーム制作は一旦区切りにして次のプロジェクトに進みたかったのでここで一区切りとした。
 tags: [AI, ブラウザ, Godot]
 cover: ../../assets/works/resonance.png
 coverAlt: Resonance の画面
