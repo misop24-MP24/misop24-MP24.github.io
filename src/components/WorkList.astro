@@ -142,9 +142,16 @@ groups.sort((x, y) => y.year - x.year);
     letter-spacing: 0.1em;
     transition: transform 0.8s var(--ease-out);
   }
+  /* 一覧では長いコメントは2行まで(続きは作品ページで全文が読めます) */
   .row__comment {
     grid-area: comment;
     justify-self: start;
+    max-width: 34rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
     margin-top: 0.35rem;
     font-size: 0.92rem;
     line-height: 1.8;
@@ -218,6 +225,10 @@ groups.sort((x, y) => y.year - x.year);
       justify-content: flex-start;
       max-width: none;
       margin-top: 0.6rem;
+    }
+    .row__comment {
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
     }
     .row__thumb {
       display: block;
