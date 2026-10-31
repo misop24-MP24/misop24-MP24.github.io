@@ -1,16 +1,16 @@
 ---
-title: Resonance
-summary: 音と距離をめぐる、静かなパズル。波をためて、眠っている惑星へ放つと、音が届いた星が目を覚まします。
+title: "Resonance"
+summary: "音と距離をめぐる、静かなパズル。波をためて、眠っている惑星へ放つと、音が届いた星が目を覚まします。"
+comment: "気持ちいい手触りと好きな世界観を作ってみたかった。ゲーム性はまだまだ改善の余地あり。ビジュアルは好き。気が向いたら、AI使わず後継作を作るかも。"
 date: 2026-10-25
-tags: [AI, ブラウザ, Godot]
-cover: ../../assets/works/resonance.png
-coverAlt: Resonance の画面
+tags: ["AI", "ブラウザ", "Godot"]
+cover: "../../assets/works/resonance.png"
+coverAlt: "Resonance の画面"
 links:
-  - label: ブラウザで遊ぶ(itch.io)
-    url: https://misop24.itch.io/resonance
-embed: https://www.youtube.com/embed/vo3NAefIryw
+  - label: "ブラウザで遊ぶ(itch.io)"
+    url: "https://misop24.itch.io/resonance"
+embed: "https://www.youtube.com/embed/vo3NAefIryw"
 ---
-
 波をためて、眠っている惑星にねらいを定めて、放ちます。音が惑星に届くと、その星が目を覚まします。目覚めた惑星は次に旅する場所になり、星座の星をすべて起こすと、その星座が歌いはじめます。
 
 ## 特徴
