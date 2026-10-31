@@ -1,11 +1,12 @@
 ---
-// 作品の一覧。年ごとに区切って、大きな作品名を縦に並べます。
+// 作品の一覧。年ごと(設定によっては、さらに月ごと)に区切って、大きな作品名を縦に並べます。
 // 作品名の下に一言コメント、右にタグが出ます。
 // マウスを乗せると、その行の空いたところに小さな丸い写真が広がり、まわりに波紋が立ちます。
 // スマホでは、各行の右に小さな丸い写真が出ます。
 import type { CollectionEntry } from 'astro:content';
 import { getImage } from 'astro:assets';
 import Ripples from './Ripples.astro';
+import { SITE } from '../config';
 
 interface Props {
   works: CollectionEntry<'works'>[];
@@ -23,18 +24,27 @@ const items = await Promise.all(
   }),
 );
 
-// 年ごとにまとめる(新しい年が上)
-const groups: { year: number; items: ((typeof items)[number] & { index: number })[] }[] = [];
+// 年ごと、その中を月ごとにまとめる(新しいものが上)
+type Item = (typeof items)[number] & { index: number };
+const groups: { year: number; months: { month: number; items: Item[] }[] }[] = [];
 items.forEach((item, index) => {
-  const year = item.work.data.date.getFullYear();
+  const d = item.work.data.date;
+  const year = d.getUTCFullYear();
+  const month = SITE.groupByMonth ? d.getUTCMonth() + 1 : 0;
   let g = groups.find((x) => x.year === year);
   if (!g) {
-    g = { year, items: [] };
+    g = { year, months: [] };
     groups.push(g);
   }
-  g.items.push({ ...item, index });
+  let m = g.months.find((x) => x.month === month);
+  if (!m) {
+    m = { month, items: [] };
+    g.months.push(m);
+  }
+  m.items.push({ ...item, index });
 });
 groups.sort((x, y) => y.year - x.year);
+groups.forEach((g) => g.months.sort((x, y) => y.month - x.month));
 ---
 
 <work-list class="list">
@@ -42,32 +52,39 @@ groups.sort((x, y) => y.year - x.year);
     groups.map((g) => (
       <section class="year" aria-label={`${g.year}年の作品`}>
         <h3 class="year__label">{g.year}</h3>
-        <ul class="year__rows">
-          {g.items.map(({ work, thumb, seed, index }) => (
-            <li>
-              <a class="row" href={`/works/${work.id}/`} data-index={index}>
-                <span class="row__title">{work.data.title}</span>
-                {work.data.comment && <span class="row__comment">{work.data.comment}</span>}
-                {work.data.tags.length > 0 && (
-                  <span class="row__tags">
-                    {work.data.tags.map((t) => (
-                      <span class="tag">{t}</span>
-                    ))}
-                  </span>
-                )}
-                <span class="row__thumb" aria-hidden="true">
-                  {thumb ? (
-                    <img src={thumb} alt="" width="80" height="80" loading="lazy" decoding="async" />
-                  ) : (
-                    <span class="row__rings">
-                      <Ripples seed={seed} />
-                    </span>
-                  )}
-                </span>
-              </a>
-            </li>
+        <div class="year__months">
+          {g.months.map((m) => (
+            <div class:list={['month', { 'month--none': m.month === 0 }]}>
+              {m.month > 0 && <h4 class="month__label">{m.month}月</h4>}
+              <ul class="month__rows">
+                {m.items.map(({ work, thumb, seed, index }) => (
+                  <li>
+                    <a class="row" href={`/works/${work.id}/`} data-index={index}>
+                      <span class="row__title">{work.data.title}</span>
+                      {work.data.comment && <span class="row__comment">{work.data.comment}</span>}
+                      {work.data.tags.length > 0 && (
+                        <span class="row__tags">
+                          {work.data.tags.map((t) => (
+                            <span class="tag">{t}</span>
+                          ))}
+                        </span>
+                      )}
+                      <span class="row__thumb" aria-hidden="true">
+                        {thumb ? (
+                          <img src={thumb} alt="" width="80" height="80" loading="lazy" decoding="async" />
+                        ) : (
+                          <span class="row__rings">
+                            <Ripples seed={seed} />
+                          </span>
+                        )}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
     ))
   }
@@ -118,6 +135,30 @@ groups.sort((x, y) => y.year - x.year);
     color: var(--mist);
     font-variant-numeric: oldstyle-nums;
     padding-top: clamp(1.15rem, 2.6vw, 2.1rem);
+    align-self: start;
+    position: sticky;
+    top: 1.5rem;
+  }
+
+  /* 月の区切り: 年の右側を、さらに「月 | 作品」に分ける */
+  .month {
+    display: grid;
+    grid-template-columns: 3.4rem minmax(0, 1fr);
+    gap: 0 clamp(0.6rem, 1.6vw, 1.4rem);
+  }
+  .month--none {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .month + .month {
+    border-top: 1px solid color-mix(in srgb, var(--hair) 55%, transparent);
+  }
+  .month__label {
+    font-weight: 400;
+    font-size: 0.82rem;
+    letter-spacing: 0.16em;
+    color: var(--mist);
+    white-space: nowrap;
+    padding-top: calc(clamp(1.15rem, 2.6vw, 2.1rem) + 0.3rem);
     align-self: start;
     position: sticky;
     top: 1.5rem;
@@ -240,6 +281,13 @@ groups.sort((x, y) => y.year - x.year);
   @media (max-width: 40rem) {
     .year {
       grid-template-columns: 1fr;
+    }
+    .month {
+      grid-template-columns: 1fr;
+    }
+    .month__label {
+      position: static;
+      padding-top: 1rem;
     }
     .year__label {
       position: static;

@@ -10,19 +10,13 @@ export const SITE = {
     'misop24のポートフォリオ。ブラウザで遊べるゲームや、itch.io・Steamで公開しているゲームをまとめています。',
   // サイトのURL(astro.config.mjs の site と同じにします)
   url: 'https://misop24-mp24.github.io',
+  // 作品一覧を、年に加えて月でも区切るか(false にすると年だけ)
+  groupByMonth: true,
 };
 
-// 外部リンク(X、itch.io、Steam など)。
-// 使うものの行頭の「//」を外して、URLを入れてください。
-// 空のままなら表示されません。
-export const LINKS: { label: string; url: string }[] = [
-  // { label: 'itch.io', url: 'https://ユーザー名.itch.io/' },
-  // { label: 'Steam', url: 'https://store.steampowered.com/developer/...' },
-  // { label: 'X', url: 'https://x.com/ユーザー名' },
-];
+// 外部リンク(X、itch.io、Steam など)と紹介ページの文章は、src/data/profile.json にあります。
+// サイト更新ツールの「プロフィール」から編集できます。
+import profile from './data/profile.json';
 
-// 紹介ページの本文(段落ごとに1行)
-export const ABOUT: string[] = [
-  'ゲームを作っています。',
-  'ブラウザで遊べるものは、各作品のページからそのまま遊べます。販売しているものは、そこから購入ページへ進めます。',
-];
+export const LINKS: { label: string; url: string }[] = profile.links;
+export const ABOUT: string[] = profile.about;
