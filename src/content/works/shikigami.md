@@ -1,17 +1,16 @@
 ---
-title: SHIKIGAMI 式神
-summary: 雲海の上の、静まりかえった白い神社。紙の式神となって舞い降り、光を導くパズルで神社をよみがえらせます。
-comment: これまで作ってきた作品のいいところを継承しつつ好きな世界観で構成した作品。こちらもゲーム部分は全く作り込みできていないけど、自分の手を動かすことに時間を割いた方がいいと思ったのでここで一旦切り上げることに。気が向いたらまたパズルや見た目の作り込みはやるかも。
+title: "SHIKIGAMI 式神"
+summary: "雲海の上の、静まりかえった白い神社。紙の式神となって舞い降り、光を導くパズルで神社をよみがえらせます。"
+comment: "前作で白基調の世界がなんか良かったので神社の世界観で作ってみた。表現はかなり好き。AIに飽きてパズル部分はAIポン出し。次はこの世界観を手製で作り込んで行きたい。"
 date: 2026-10-26
-tags: [AI, ブラウザ, Godot, 3D]
-cover: ../../assets/works/shikigami.png
-coverAlt: 雲海に浮かぶ白い神社と、光の柱
+tags: ["AI", "ブラウザ", "Godot", "3D"]
+cover: "../../assets/works/shikigami.png"
+coverAlt: "雲海に浮かぶ白い神社と、光の柱"
 links:
-  - label: ブラウザで遊ぶ(itch.io)
-    url: https://misop24.itch.io/shikigami
-embed: https://www.youtube.com/embed/jBzhK0Cn41Q
+  - label: "ブラウザで遊ぶ(itch.io)"
+    url: "https://misop24.itch.io/shikigami"
+embed: "https://www.youtube.com/embed/jBzhK0Cn41Q"
 ---
-
 紙でできた式神を操って、雲海の上の白い神社へ舞い降ります。鏡を回し、駒を運び、御簾を上げ、重りを置いて、光を皿へと導きます。謎が解けるたびに鐘が鳴り、島が浮かび上がります。島を訪ねて、青い魂を解き放ちましょう。
 
 ## 特徴
